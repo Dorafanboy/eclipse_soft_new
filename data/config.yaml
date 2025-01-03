@@ -1,25 +1,25 @@
 ﻿eth_bridge: # сколько ETH бриджи в Eclipse
-  min_balance: 0.001 # если баланс ETH в Eclipse выше этого числа, бриджа не будет в Eclipse
-  min_value: 0.001
-  max_value: 0.0015
+  min_balance: 0.0001 # если баланс ETH в Eclipse выше этого числа, бриджа не будет в Eclipse
+  min_value: 0.0012
+  max_value: 0.0017
   min_precision: 4    # минимальное количество знаков после запятой
   max_precision: 6    # максимальное количество знаков после запятой
   
 networks: # из каких сетей бриджить в Eclipse (берется какаято рандомная из тех что в chains:, и в которой найдется баланс
   chains: # чтобы не использовать сеть надо закомментировать (#)
   - "Base"
-   # - "Arbitrum"
-#    - "Optimism"
-#    - "Linea"
-#    - "Scroll"
-#    - "ZkSync"
+  - "Arbitrum"
+  - "Optimism"
+  - "Linea"
+  - "Scroll"
+  #- "ZkSync"
     
 swaps: # токены, который будут использоваться для свапов (работает пока что только ETH/USDC)
   tokens: [ "ETH", "USDC" ] #"SOL", "USDT" 
   native: # сколько свапать ETH
     eth: # сколько свапать ETH
-      min_value: 0.00003
-      max_value: 0.00007
+      min_value: 0.00002
+      max_value: 0.00008
       min_precision: 5
       max_precision: 8
     sol: # пока что ни на что не влияет
@@ -28,8 +28,8 @@ swaps: # токены, который будут использоваться д
       min_precision: 4
       max_precision: 6
   stable: # сколько свапать USDC
-    min_value: 0.3
-    max_value: 0.7
+    min_value: 0.1
+    max_value: 0.5
     min_precision: 2
     max_precision: 2
     
@@ -43,20 +43,20 @@ delay: # задержки
   between_retries: # задержка между повторными попытками (в секундах)
     min: 5
     max: 15
-    attempts: 3  # максимальное количество попыток
+    attempts: 7  # максимальное количество попыток
     
 modules:
   modules_count: # сколько модулей выполнять
-    min: 4
-    max: 5
+    min: 1
+    max: 1
   enabled: # какие модули выполнять (ставить true/false)
-    orca: false
-    lifinity: false
-    invariant: false
+    orca: true
+    lifinity: true
+    invariant: true
     relay: true
-    solar: false
+    solar: true
     underdog: true
   
 threads:
-  count: 2  # количество одновременно работающих аккаунтов
+  count: 1  # количество одновременно работающих аккаунтов
   enabled: false  # включить/выключить многопоточность
