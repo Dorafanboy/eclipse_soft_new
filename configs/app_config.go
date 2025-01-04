@@ -27,6 +27,7 @@ type AppConfig struct {
 	Delay     *DelayConfig
 	Modules   *ModulesConfig
 	Threads   ThreadConfig `yaml:"threads"`
+	Telegram  *TelegramConfig
 }
 
 type Token struct {
@@ -73,6 +74,11 @@ func NewAppConfig() (*AppConfig, error) {
 		return nil, err
 	}
 
+	telegramConfig, err := NewTelegramConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	data, err := os.ReadFile(constants.ConfigPath)
 	if err != nil {
 		return nil, err
@@ -92,6 +98,7 @@ func NewAppConfig() (*AppConfig, error) {
 		Delay:     delayConfig,
 		Modules:   modulesConfig,
 		Threads:   wrapper.Threads,
+		Telegram:  telegramConfig,
 	}, nil
 }
 

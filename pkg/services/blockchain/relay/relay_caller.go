@@ -7,6 +7,7 @@ import (
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/randomizer"
+	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
 	"fmt"
 	"github.com/gagliardetto/solana-go"
@@ -19,7 +20,16 @@ import (
 
 type Module struct{}
 
-func (m *Module) Execute(ctx context.Context, cfg configs.RelayConfig, evmAccount *model.EvmAccount, eclipseAccount *model.EclipseAccount, rpcClient *rpc.Client, httpClient http.Client, maxAttempts int) (bool, error) {
+func (m *Module) Execute(
+	ctx context.Context,
+	cfg configs.RelayConfig,
+	evmAccount *model.EvmAccount,
+	eclipseAccount *model.EclipseAccount,
+	rpcClient *rpc.Client,
+	httpClient http.Client,
+	notifier *telegram.Notifier,
+	maxAttempts int,
+) (bool, error) {
 	log.Println("Начал выполнение модуля Relay Bridge")
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -74,16 +84,23 @@ func (m *Module) Execute(ctx context.Context, cfg configs.RelayConfig, evmAccoun
 			return false, err
 		}
 
-		_, err = MakeRelayBridge(ctx, *evmAccount, randChain, *response)
+		sig, err := MakeRelayBridge(ctx, *evmAccount, randChain, *response)
 		if err != nil {
 			log.Printf("Ошибка бриджа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			fmt.Println()
 			continue
 		} else {
+			notifier.AddSuccessMessageWithTxLink(
+				eclipseAccount.PublicKey.String(),
+				fmt.Sprintf("Relay Bridge: %s -> Eclipse, %f ETH", randChain.Name, valueWei),
+				randChain.ScanURL,
+				sig.String(),
+			)
 			return true, nil
 		}
 	}
 
-	return true, nil
+	notifier.AddErrorMessage(eclipseAccount.PublicKey.String(), "Relay Bridge")
+	return false, fmt.Errorf("could not execute bridge after %d attempts", maxAttempts)
 }

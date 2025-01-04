@@ -3,11 +3,13 @@
 import (
 	"context"
 	"eclipse/configs"
+	"eclipse/constants"
 	"eclipse/internal/base"
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/blockchain/lifinity"
 	"eclipse/pkg/services/randomizer"
+	"eclipse/pkg/services/telegram"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
 	"log"
@@ -17,7 +19,15 @@ import (
 
 type Module struct{}
 
-func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rpc.Client, cfg configs.InvariantConfig, acc *model.EclipseAccount, maxAttempts int) (bool, error) {
+func (m *Module) Execute(
+	ctx context.Context,
+	httpClient http.Client,
+	client *rpc.Client,
+	cfg configs.InvariantConfig,
+	acc *model.EclipseAccount,
+	notifier *telegram.Notifier,
+	maxAttempts int,
+) (bool, error) {
 	log.Println("Начал выполнение модуля Solar Swap")
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		firstPair, secondPair, tokenType, err := base.GetRandomTokenPair(cfg.Tokens)
@@ -81,14 +91,21 @@ func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rp
 			return false, fmt.Errorf("error creating swap transaction: %v", err)
 		}
 
-		if err = ExecuteSwapFromInstructions(ctx, client, txResponse.Data[0].Transaction, acc.PrivateKey); err != nil {
+		if sig, err := ExecuteSwapFromInstructions(ctx, client, txResponse.Data[0].Transaction, acc.PrivateKey); err != nil {
 			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {
+			notifier.AddSuccessMessageWithTxLink(
+				acc.PublicKey.String(),
+				fmt.Sprintf("Solar Swap: %.6f %s -> %s", value, firstPair.Symbol, secondPair.Symbol),
+				constants.EclipseScan,
+				sig.String(),
+			)
 			return true, nil
 		}
 	}
 
-	return true, nil
+	notifier.AddErrorMessage(acc.PublicKey.String(), "Solar Swap")
+	return false, fmt.Errorf("could not execute swap after %d attempts", maxAttempts)
 }

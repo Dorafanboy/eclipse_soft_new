@@ -3,10 +3,12 @@
 import (
 	"context"
 	"eclipse/configs"
+	"eclipse/constants"
 	"eclipse/internal/base"
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/randomizer"
+	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -22,7 +24,15 @@ const (
 
 type Module struct{}
 
-func (m *Module) Execute(ctx context.Context, httpClient http.Client, rpcClient *rpc.Client, cfg configs.InvariantConfig, acc *model.EclipseAccount, maxAttempts int) (bool, error) {
+func (m *Module) Execute(
+	ctx context.Context,
+	httpClient http.Client,
+	rpcClient *rpc.Client,
+	cfg configs.InvariantConfig,
+	acc *model.EclipseAccount,
+	notifier *telegram.Notifier,
+	maxAttempts int,
+) (bool, error) {
 	log.Println("Начал выполнение модуля Invariant Swap")
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -93,15 +103,22 @@ func (m *Module) Execute(ctx context.Context, httpClient http.Client, rpcClient 
 			return false, fmt.Errorf("error creating instructions: %v", err)
 		}
 
-		_, err = InvariantSendTx(ctx, rpcClient, instructions, params.Payer, newAccountKeypair)
+		sig, err := InvariantSendTx(ctx, rpcClient, instructions, params.Payer, newAccountKeypair)
 		if err != nil {
 			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {
+			notifier.AddSuccessMessageWithTxLink(
+				acc.PublicKey.String(),
+				fmt.Sprintf("Invariant Swap: %.6f %s -> %s", value, firstPair.Symbol, secondPair.Symbol),
+				constants.EclipseScan,
+				sig.String(),
+			)
 			return true, nil
 		}
 	}
 
-	return false, fmt.Errorf("could not find sufficient balance after %d attempts", maxAttempts)
+	notifier.AddErrorMessage(acc.PublicKey.String(), "Invariant Swap")
+	return false, fmt.Errorf("could not execute swap after %d attempts", maxAttempts)
 }

@@ -2,7 +2,9 @@
 
 import (
 	"context"
+	"eclipse/constants"
 	"eclipse/model"
+	"eclipse/pkg/services/telegram"
 	"eclipse/utils/requester"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -14,7 +16,15 @@ import (
 
 type Module struct{}
 
-func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rpc.Client, acc *model.EclipseAccount, words []string, maxAttempts int) (bool, error) {
+func (m *Module) Execute(
+	ctx context.Context,
+	httpClient http.Client,
+	client *rpc.Client,
+	acc *model.EclipseAccount,
+	notifier *telegram.Notifier,
+	words []string,
+	maxAttempts int,
+) (bool, error) {
 	log.Println("Начал выполнение модуля Underdog Create Collection")
 	rand.Seed(time.Now().UnixNano())
 
@@ -49,15 +59,22 @@ func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rp
 
 		res := CreateCollection(httpClient, collection)
 
-		err := SendSolanaTransaction(ctx, client, res, acc.PrivateKey)
+		sig, err := SendSolanaTransaction(ctx, client, res, acc.PrivateKey)
 		if err != nil {
 			log.Printf("error creating collection from tx (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {
+			notifier.AddSuccessMessageWithTxLink(
+				acc.PublicKey.String(),
+				"Underdog",
+				constants.EclipseScan,
+				sig.String(),
+			)
 			return true, nil
 		}
 	}
 
-	return true, nil
+	notifier.AddErrorMessage(acc.PublicKey.String(), "Underdog")
+	return false, fmt.Errorf("could not execute create collection after %d attempts", maxAttempts)
 }

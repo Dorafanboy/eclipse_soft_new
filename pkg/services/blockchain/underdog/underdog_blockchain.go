@@ -11,15 +11,15 @@ import (
 	"time"
 )
 
-func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx string, userPrivateKey solana.PrivateKey) error {
+func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx string, userPrivateKey solana.PrivateKey) (solana.Signature, error) {
 	txBytes, err := base64.StdEncoding.DecodeString(encodedTx)
 	if err != nil {
-		return fmt.Errorf("failed to decode base64: %v", err)
+		return solana.Signature{}, fmt.Errorf("failed to decode base64: %v", err)
 	}
 
 	tx, err := solana.TransactionFromBytes(txBytes)
 	if err != nil {
-		return fmt.Errorf("failed to decode transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("failed to decode transaction: %v", err)
 	}
 
 	messageBytes, _ := tx.Message.MarshalBinary()
@@ -35,7 +35,7 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("error sending transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("error sending transaction: %v", err)
 	}
 
 	log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
@@ -50,11 +50,11 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 		}
 		if status.Value[0] != nil {
 			if status.Value[0].Err != nil {
-				return fmt.Errorf("transaction failed: %v", status.Value[0].Err)
+				return solana.Signature{}, fmt.Errorf("transaction failed: %v", status.Value[0].Err)
 			}
-			return nil
+			return sig, nil
 		}
 	}
 
-	return fmt.Errorf("transaction confirmation timeout")
+	return solana.Signature{}, fmt.Errorf("transaction confirmation timeout")
 }

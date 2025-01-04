@@ -13,15 +13,15 @@ import (
 	"time"
 )
 
-func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encodedTx string, feePayer solana.PrivateKey) error {
+func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encodedTx string, feePayer solana.PrivateKey) (solana.Signature, error) {
 	txBytes, err := base64.StdEncoding.DecodeString(encodedTx)
 	if err != nil {
-		return fmt.Errorf("failed to decode base64: %v", err)
+		return solana.Signature{}, fmt.Errorf("failed to decode base64: %v", err)
 	}
 
 	originalTx, err := solana.TransactionFromDecoder(bin.NewBinDecoder(txBytes))
 	if err != nil {
-		return fmt.Errorf("failed to decode transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("failed to decode transaction: %v", err)
 	}
 
 	instructions := make([]solana.Instruction, 0)
@@ -73,7 +73,7 @@ func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encode
 
 	recent, err := client.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
-		return fmt.Errorf("error getting latest blockhash: %v", err)
+		return solana.Signature{}, fmt.Errorf("error getting latest blockhash: %v", err)
 	}
 
 	tx, err := solana.NewTransaction(
@@ -102,7 +102,7 @@ func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encode
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error signing transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("error signing transaction: %v", err)
 	}
 
 	retrie := uint(5)
@@ -115,7 +115,7 @@ func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encode
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("error sending transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("error sending transaction: %v", err)
 	}
 
 	time.Sleep(time.Second * 1)
@@ -143,5 +143,5 @@ func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encode
 	}
 
 	log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
-	return nil
+	return sig, nil
 }

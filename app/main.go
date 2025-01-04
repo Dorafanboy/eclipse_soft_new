@@ -4,10 +4,10 @@ import (
 	"eclipse/cmd"
 	"eclipse/configs"
 	"eclipse/pkg/services/file"
+	"eclipse/pkg/services/telegram"
 	"eclipse/storage"
 	"eclipse/utils/format"
 	"eclipse/utils/managers"
-	"fmt"
 	"log"
 	"time"
 )
@@ -35,8 +35,6 @@ func run() error {
 		return err
 	}
 
-	fmt.Println(proxies)
-
 	evmWallets := wallets.EvmAccounts
 	eclipseWallets := wallets.Eclipse
 
@@ -53,7 +51,16 @@ func run() error {
 	if appCfg.Threads.Enabled {
 		log.Println("Включен режим многопоточного запуска аккаунтов")
 	}
-	
+
+	if appCfg.Telegram.Enabled {
+		log.Println("Включен режим отправки уведомлений в телеграм")
+	}
+
+	notifier, err := telegram.NewNotifier(appCfg.Telegram.BotToken, appCfg.Telegram.UserID)
+	if err != nil {
+		return err
+	}
+
 	log.Println("Включенные модули")
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -67,8 +74,10 @@ func run() error {
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	log.Printf("Ожидаю 10 секунд для просмотра включенных модулей и начинаю")
+
 	time.Sleep(time.Second * 10)
 
 	moduleManager := managers.NewModuleManager(*appCfg.Modules)
-	return cmd.StartSoft(*wallets, *appCfg, moduleManager, proxyManager, wordLists)
+
+	return cmd.StartSoft(*wallets, *appCfg, moduleManager, proxyManager, notifier, wordLists)
 }

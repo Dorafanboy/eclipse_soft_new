@@ -3,10 +3,12 @@
 import (
 	"context"
 	"eclipse/configs"
+	"eclipse/constants"
 	"eclipse/internal/base"
 	"eclipse/model"
 	"eclipse/pkg/interfaces"
 	"eclipse/pkg/services/randomizer"
+	"eclipse/pkg/services/telegram"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
 	"log"
@@ -21,6 +23,7 @@ func (m *Module) Execute(
 	cfg configs.InvariantConfig,
 	acc *model.EclipseAccount,
 	proxyManager interfaces.ProxyManagerInterface,
+	notifier *telegram.Notifier,
 	accountIndex int,
 	maxAttempts int,
 ) (bool, error) {
@@ -90,15 +93,22 @@ func (m *Module) Execute(
 			return false, err
 		}
 
-		err = SimulateAndSendTransaction(ctx, rpcClient, instructions, acc.PrivateKey)
+		sig, err := SimulateAndSendTransaction(ctx, rpcClient, instructions, acc.PrivateKey)
 		if err != nil {
 			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {
+			notifier.AddSuccessMessageWithTxLink(
+				acc.PublicKey.String(),
+				fmt.Sprintf("Orca Swap: %.6f %s -> %s", value, firstPair.Symbol, secondPair.Symbol),
+				constants.EclipseScan,
+				sig.String(),
+			)
 			return true, nil
 		}
 	}
 
-	return true, nil
+	notifier.AddErrorMessage(acc.PublicKey.String(), "Orca Swap")
+	return false, fmt.Errorf("could not execute swap after %d attempts", maxAttempts)
 }

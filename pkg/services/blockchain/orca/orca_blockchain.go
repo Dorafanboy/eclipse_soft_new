@@ -15,7 +15,7 @@ type SpecialAccount struct {
 	IsFeePayer bool
 }
 
-func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instructions *SwapInstructions, privateKey solana.PrivateKey) error {
+func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instructions *SwapInstructions, privateKey solana.PrivateKey) (solana.Signature, error) {
 	var solanaInstructions []solana.Instruction
 
 	var secondSignerPrivateKey solana.PrivateKey
@@ -46,7 +46,7 @@ func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instruc
 
 	recent, err := client.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
-		return fmt.Errorf("error getting latest blockhash: %v", err)
+		return solana.Signature{}, fmt.Errorf("error getting latest blockhash: %v", err)
 	}
 
 	tx, err := solana.NewTransaction(
@@ -55,7 +55,7 @@ func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instruc
 		solana.TransactionPayer(privateKey.PublicKey()),
 	)
 	if err != nil {
-		return fmt.Errorf("error creating transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("error creating transaction: %v", err)
 	}
 
 	_, err = tx.Sign(func(key solana.PublicKey) *solana.PrivateKey {
@@ -68,7 +68,7 @@ func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instruc
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error signing transaction: %v", err)
+		return solana.Signature{}, fmt.Errorf("error signing transaction: %v", err)
 	}
 
 	retrie := uint(5)
@@ -81,9 +81,9 @@ func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instruc
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("transaction execution failed: %v", err)
+		return solana.Signature{}, fmt.Errorf("transaction execution failed: %v", err)
 	}
 
 	log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
-	return nil
+	return sig, nil
 }

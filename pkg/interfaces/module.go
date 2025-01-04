@@ -4,6 +4,7 @@ import (
 	"context"
 	"eclipse/configs"
 	"eclipse/model"
+	"eclipse/pkg/services/telegram"
 	"github.com/gagliardetto/solana-go/rpc"
 	"net/http"
 )
@@ -32,6 +33,7 @@ type OrcaModule interface {
 		cfg configs.InvariantConfig,
 		acc *model.EclipseAccount,
 		proxyManager ProxyManagerInterface,
+		notifier *telegram.Notifier,
 		accountIndex int,
 		maxAttempts int,
 	) (bool, error)
@@ -43,6 +45,7 @@ type UnderdogModule interface {
 		httpClient http.Client,
 		rpcClient *rpc.Client,
 		acc *model.EclipseAccount,
+		notifier *telegram.Notifier,
 		words []string,
 		maxAttempts int,
 	) (bool, error)
@@ -55,6 +58,7 @@ type DefaultModule interface {
 		rpcClient *rpc.Client,
 		cfg configs.InvariantConfig,
 		acc *model.EclipseAccount,
+		notifier *telegram.Notifier,
 		maxAttempts int,
 	) (bool, error)
 }

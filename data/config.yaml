@@ -38,8 +38,8 @@ delay: # задержки
     min: 30  
     max: 60  
   between_modules: # задержка между модулями (в минутах)
-    min: 15
-    max: 35
+    min: 1
+    max: 5
   between_retries: # задержка между повторными попытками (в секундах)
     min: 5
     max: 15
@@ -47,16 +47,22 @@ delay: # задержки
     
 modules:
   modules_count: # сколько модулей выполнять
-    min: 1
-    max: 1
+    min: 2
+    max: 2
   enabled: # какие модули выполнять (ставить true/false)
     orca: true
     lifinity: true
-    invariant: true
-    relay: true
-    solar: true
-    underdog: true
+    invariant: false
+    relay: false
+    solar: false
+    underdog: false
   
 threads:
   count: 1  # количество одновременно работающих аккаунтов
-  enabled: false  # включить/выключить многопоточность
+  enabled: true  # включить/выключить многопоточность
+  
+telegram: # слать ли уведомления в телеграм
+  enabled: true # true если надо(заполнять поля ниже), false если нет
+  bot_token: "" # создать бота у @BotFather
+  user_id: 1234 # айдишник можно получить здесь @getmyid_bot
+  

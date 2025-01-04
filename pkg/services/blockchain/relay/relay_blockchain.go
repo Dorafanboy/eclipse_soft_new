@@ -3,6 +3,7 @@
 import (
 	"context"
 	"eclipse/configs"
+	"eclipse/constants"
 	"eclipse/model"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
@@ -14,32 +15,32 @@ import (
 	"strconv"
 )
 
-func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData configs.Chain, txData TransactionData) (bool, error) {
+func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData configs.Chain, txData TransactionData) (common.Hash, error) {
 	log.Println("Произвожу вызов функции для Relay бриджа")
 
 	client, err := ethclient.Dial(chainData.RPC)
 	if err != nil {
-		return false, fmt.Errorf("failed to connect to the %s client: %v", chainData.Name, err)
+		return constants.ZeroHash, fmt.Errorf("failed to connect to the %s client: %v", chainData.Name, err)
 	}
 
 	nonce, err := client.PendingNonceAt(ctx, acc.Address)
 	if err != nil {
-		return false, fmt.Errorf("failed to get nonce: %v", err)
+		return constants.ZeroHash, fmt.Errorf("failed to get nonce: %v", err)
 	}
 
 	head, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to get header: %v", err)
+		return constants.ZeroHash, fmt.Errorf("failed to get header: %v", err)
 	}
 
 	baseFee := head.BaseFee
 	if baseFee == nil {
-		return false, fmt.Errorf("base fee is nil, network might not support EIP-1559")
+		return constants.ZeroHash, fmt.Errorf("base fee is nil, network might not support EIP-1559")
 	}
 
 	suggestedGasPrice, err := client.SuggestGasPrice(ctx)
 	if err != nil {
-		return false, fmt.Errorf("failed to get suggested gas price: %v", err)
+		return constants.ZeroHash, fmt.Errorf("failed to get suggested gas price: %v", err)
 	}
 
 	maxPriorityFeePerGas := new(big.Int).Sub(suggestedGasPrice, baseFee)
@@ -69,32 +70,32 @@ func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData config
 
 	gasLimit, err := client.EstimateGas(ctx, msg)
 	if err != nil {
-		return false, fmt.Errorf("transaction simulation failed: %v", err)
+		return constants.ZeroHash, fmt.Errorf("transaction simulation failed: %v", err)
 	}
 
 	balance, err := client.BalanceAt(ctx, acc.Address, nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to get balance: %v", err)
+		return constants.ZeroHash, fmt.Errorf("failed to get balance: %v", err)
 	}
 
 	maxGasCost := new(big.Int).Mul(maxFeePerGas, big.NewInt(int64(gasLimit)))
 	totalCost := new(big.Int).Add(maxGasCost, big.NewInt(int64(value)))
 
 	if balance.Cmp(totalCost) < 0 {
-		return false, fmt.Errorf("insufficient balance: have %v need %v", balance, totalCost)
+		return constants.ZeroHash, fmt.Errorf("insufficient balance: have %v need %v", balance, totalCost)
 	}
 
 	var gasPrice *big.Int
 	if txData.MaxFeePerGas == "0" || txData.MaxFeePerGas == "" {
 		priorityFee, err := strconv.ParseInt(txData.MaxPriorityFeePerGas, 10, 64)
 		if err != nil {
-			return false, fmt.Errorf("failed to parse MaxPriorityFeePerGas: %v", err)
+			return constants.ZeroHash, fmt.Errorf("failed to parse MaxPriorityFeePerGas: %v", err)
 		}
 		gasPrice = big.NewInt(priorityFee)
 	} else {
 		maxFee, err := strconv.ParseInt(txData.MaxFeePerGas, 10, 64)
 		if err != nil {
-			return false, fmt.Errorf("failed to parse MaxFeePerGas: %v", err)
+			return constants.ZeroHash, fmt.Errorf("failed to parse MaxFeePerGas: %v", err)
 		}
 		gasPrice = big.NewInt(maxFee)
 	}
@@ -110,14 +111,14 @@ func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData config
 
 	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(big.NewInt(int64(chainData.ChainID))), acc.PrivateKey)
 	if err != nil {
-		return false, fmt.Errorf("failed to sign tx: %v", err)
+		return constants.ZeroHash, fmt.Errorf("failed to sign tx: %v", err)
 	}
 
 	log.Println("✅ Симуляция успешна! Отправляем транзакцию...")
 
 	err = client.SendTransaction(ctx, signedTx)
 	if err != nil {
-		return false, fmt.Errorf("failed to send transaction: %v", err)
+		return constants.ZeroHash, fmt.Errorf("failed to send transaction: %v", err)
 	}
 
 	hash := signedTx.Hash()
@@ -125,5 +126,5 @@ func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData config
 	log.Printf("Транзакция успешно отправлена %s%s\n", chainData.ScanURL, hash)
 	fmt.Println()
 
-	return true, nil
+	return hash, nil
 }
