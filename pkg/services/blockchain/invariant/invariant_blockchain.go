@@ -3,12 +3,12 @@
 import (
 	"context"
 	"eclipse/constants"
+	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/pkg/services/blockchain/lifinity"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gagliardetto/solana-go"
@@ -78,7 +78,7 @@ func createSwapInstruction(params token.SwapInstructions, tempAccount solana.Pub
 
 	destinationATA, _, err := token.FindAssociatedTokenAddress2022(params.Payer.PublicKey(), mintKey)
 	if err != nil {
-		log.Fatalf("Error finding associated token address: %v", err)
+		logger.Error("Error finding associated token address: %v", err)
 	}
 
 	data := make([]byte, 34)
@@ -260,7 +260,7 @@ func InvariantSendTx(ctx context.Context, client *rpc.Client, instructions []sol
 		})
 		if err != nil {
 			if i < maxAttempts-1 {
-				log.Printf("Attempt %d: Waiting for confirmation... (%v)", i+1, err)
+				logger.Info("Attempt %d: Waiting for confirmation... (%v)", i+1, err)
 				time.Sleep(time.Second * 3)
 				continue
 			}
@@ -271,7 +271,7 @@ func InvariantSendTx(ctx context.Context, client *rpc.Client, instructions []sol
 			if response.Meta.Err != nil {
 				return sig, fmt.Errorf("transaction failed with error: %v", response.Meta.Err)
 			}
-			log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
+			logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
 			return sig, nil
 		}
 

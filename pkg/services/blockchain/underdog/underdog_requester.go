@@ -2,9 +2,9 @@
 
 import (
 	"bytes"
+	"eclipse/internal/logger"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -22,12 +22,12 @@ type CollectionData struct {
 func CreateCollection(client http.Client, data CollectionData) string {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
 	}
 
 	req, err := http.NewRequest("POST", "https://eclipse.underdogprotocol.com/api/collections", bytes.NewReader(jsonData))
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
 	}
 
 	req.Header.Set("accept", "application/json, text/plain, */*")
@@ -47,12 +47,15 @@ func CreateCollection(client http.Client, data CollectionData) string {
 	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+
 	}
+	
 	defer resp.Body.Close()
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+
 	}
 
 	type Response struct {
@@ -62,7 +65,8 @@ func CreateCollection(client http.Client, data CollectionData) string {
 
 	var response Response
 	if err := json.Unmarshal(bodyText, &response); err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+
 	}
 
 	return response.Transaction

@@ -3,12 +3,12 @@
 import (
 	"context"
 	"eclipse/constants"
+	"eclipse/internal/logger"
 	"eclipse/model"
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/requester"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -25,7 +25,7 @@ func (m *Module) Execute(
 	words []string,
 	maxAttempts int,
 ) (bool, error) {
-	log.Println("Начал выполнение модуля Underdog Create Collection")
+	logger.Info("Начал выполнение модуля Underdog Create Collection")
 	rand.Seed(time.Now().UnixNano())
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -47,11 +47,11 @@ func (m *Module) Execute(
 			Burnable:     rand.Float32() < 0.5,
 		}
 
-		log.Printf("Creating new collection:")
-		log.Printf("- Name: %s", collection.Name)
-		log.Printf("- Description: %s", collection.Description)
-		log.Printf("- Image: %s", collection.Image)
-		log.Printf("- Flags: Soulbound=%v, Transferable=%v, Burnable=%v",
+		logger.Info("Creating new collection:")
+		logger.Info("- Name: %s", collection.Name)
+		logger.Info("- Description: %s", collection.Description)
+		logger.Info("- Image: %s", collection.Image)
+		logger.Info("- Flags: Soulbound=%v, Transferable=%v, Burnable=%v",
 			collection.Soulbound,
 			collection.Transferable,
 			collection.Burnable,
@@ -61,7 +61,7 @@ func (m *Module) Execute(
 
 		sig, err := SendSolanaTransaction(ctx, client, res, acc.PrivateKey)
 		if err != nil {
-			log.Printf("error creating collection from tx (попытка %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("error creating collection from tx (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {

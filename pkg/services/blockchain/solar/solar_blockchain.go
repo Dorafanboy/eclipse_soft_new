@@ -3,13 +3,13 @@
 import (
 	"context"
 	"eclipse/constants"
+	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"encoding/base64"
 	"fmt"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"time"
 )
 
@@ -82,7 +82,7 @@ func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encode
 		solana.TransactionPayer(feePayer.PublicKey()),
 	)
 	if err != nil {
-		fmt.Errorf("error creating transaction: %v", err)
+		logger.Error("error creating transaction: %v", err)
 	}
 
 	tx.Message.SetVersion(0)
@@ -142,6 +142,6 @@ func ExecuteSwapFromInstructions(ctx context.Context, client *rpc.Client, encode
 		time.Sleep(time.Second * 2)
 	}
 
-	log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
+	logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
 	return sig, nil
 }

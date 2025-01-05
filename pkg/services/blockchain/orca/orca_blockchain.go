@@ -3,10 +3,10 @@
 import (
 	"context"
 	"eclipse/constants"
+	"eclipse/internal/logger"
 	"fmt"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 )
 
 type SpecialAccount struct {
@@ -84,6 +84,6 @@ func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instruc
 		return solana.Signature{}, fmt.Errorf("transaction execution failed: %v", err)
 	}
 
-	log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
+	logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
 	return sig, nil
 }

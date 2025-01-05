@@ -5,6 +5,7 @@ import (
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
+	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/randomizer"
@@ -12,7 +13,6 @@ import (
 	"eclipse/utils/balance"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,7 +33,7 @@ func (m *Module) Execute(
 	notifier *telegram.Notifier,
 	maxAttempts int,
 ) (bool, error) {
-	log.Println("Начал выполнение модуля Invariant Swap")
+	logger.Info("Начал выполнение модуля Invariant Swap")
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		firstPair, secondPair, tokenType, err := base.GetRandomTokenPair(cfg.Tokens)
@@ -80,7 +80,7 @@ func (m *Module) Execute(
 
 		isETH := firstPair.Address.String() == WRAPPED_ETH_ADDRESS
 
-		log.Printf("Пытаюсь выполнить свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
+		logger.Info("Пытаюсь выполнить свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
 
 		params := token.SwapInstructions{
 			Payer:         acc.PrivateKey,
@@ -94,7 +94,7 @@ func (m *Module) Execute(
 
 		err = balance.CheckAndWaitForBalance(ctx, rpcClient, params, amountDecimals, 3)
 		if err != nil {
-			log.Printf("Insufficient balance for pair (attempt %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("Insufficient balance for pair (attempt %d/%d): %v", attempt+1, maxAttempts, err)
 			continue
 		}
 
@@ -105,7 +105,7 @@ func (m *Module) Execute(
 
 		sig, err := InvariantSendTx(ctx, rpcClient, instructions, params.Payer, newAccountKeypair)
 		if err != nil {
-			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {

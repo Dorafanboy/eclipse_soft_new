@@ -5,6 +5,7 @@ import (
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
+	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/blockchain/lifinity"
@@ -12,7 +13,6 @@ import (
 	"eclipse/pkg/services/telegram"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"net/http"
 	"time"
 )
@@ -28,7 +28,7 @@ func (m *Module) Execute(
 	notifier *telegram.Notifier,
 	maxAttempts int,
 ) (bool, error) {
-	log.Println("Начал выполнение модуля Solar Swap")
+	logger.Info("Начал выполнение модуля Solar Swap")
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		firstPair, secondPair, tokenType, err := base.GetRandomTokenPair(cfg.Tokens)
 		if err != nil {
@@ -67,7 +67,7 @@ func (m *Module) Execute(
 			return false, fmt.Errorf("unknown token type: %s", tokenType)
 		}
 
-		log.Printf("Буду выполнять свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
+		logger.Info("Буду выполнять свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
 
 		swapParams := SwapParams{
 			Amount:    valueStr,
@@ -92,7 +92,7 @@ func (m *Module) Execute(
 		}
 
 		if sig, err := ExecuteSwapFromInstructions(ctx, client, txResponse.Data[0].Transaction, acc.PrivateKey); err != nil {
-			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {

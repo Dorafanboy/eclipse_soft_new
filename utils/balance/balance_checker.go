@@ -2,10 +2,10 @@
 
 import (
 	"context"
+	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"math"
 	"math/big"
 	"strconv"
@@ -70,7 +70,7 @@ func CheckAndWaitForBalance(ctx context.Context, client *rpc.Client, params toke
 	for i := 0; i < maxAttempts; i++ {
 		balance, err := GetTokenBalance(ctx, client, params)
 		if err != nil {
-			log.Printf("Ошибка проверки баланса %s (попытка %d/%d): %v", tokenName, i+1, maxAttempts, err)
+			logger.Error("Ошибка проверки баланса %s (попытка %d/%d): %v", tokenName, i+1, maxAttempts, err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -82,7 +82,7 @@ func CheckAndWaitForBalance(ctx context.Context, client *rpc.Client, params toke
 		floatVal, _ = humanBalance.Float64()
 
 		if balance >= requiredAmount {
-			log.Printf("Баланс %s найден: %.6f (требуется: %.6f)",
+			logger.Info("Баланс %s найден: %.6f (требуется: %.6f)",
 				tokenName, floatVal, reqFloatVal)
 			return nil
 		}

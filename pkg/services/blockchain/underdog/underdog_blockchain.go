@@ -3,11 +3,11 @@
 import (
 	"context"
 	"eclipse/constants"
+	"eclipse/internal/logger"
 	"encoding/base64"
 	"fmt"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"time"
 )
 
@@ -38,14 +38,14 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 		return solana.Signature{}, fmt.Errorf("error sending transaction: %v", err)
 	}
 
-	log.Printf("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
+	logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
 
 	maxAttempts := 30
 	for i := 0; i < maxAttempts; i++ {
 		time.Sleep(time.Second)
 		status, err := client.GetSignatureStatuses(ctx, true, sig)
 		if err != nil {
-			fmt.Printf("Error checking status: %v\n", err)
+			logger.Error("Error checking status: %v\n", err)
 			continue
 		}
 		if status.Value[0] != nil {

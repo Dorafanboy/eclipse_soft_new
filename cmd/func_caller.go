@@ -4,6 +4,7 @@ import (
 	"context"
 	"eclipse/configs"
 	"eclipse/internal/base"
+	"eclipse/internal/logger"
 	"eclipse/pkg/interfaces"
 	"eclipse/pkg/services/blockchain/relay"
 	"eclipse/pkg/services/file"
@@ -13,7 +14,6 @@ import (
 	"eclipse/utils/managers"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"math/rand"
 	"sync"
 )
@@ -86,7 +86,7 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			),
 		)
 
-		log.Printf("[Thread %d] Account [%d/%d] start EVM: %s, ECLIPSE: %s\n\n",
+		logger.Info("[Thread %d] Account [%d/%d] start EVM: %s, ECLIPSE: %s\n\n",
 			threadNum+1,
 			i+1,
 			len(wallets.EvmAccounts),
@@ -110,13 +110,13 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			)
 
 			if err != nil {
-				log.Printf("[Thread %d] Error: %v", threadNum+1, err)
+				logger.Error("[Thread %d] Error: %v", threadNum+1, err)
 			}
 
 			if err == nil || !res {
-				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false) // тут потом поменять true/false
+				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, true)
 			} else {
-				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false) // тут потом поменять true/false
+				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false)
 			}
 		}
 
@@ -126,7 +126,7 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 		)
 
 		fmt.Println()
-		log.Printf("Буду выполнять %d модулей на аккаунте %s\n", numModules, eclipseAcc.PublicKey.String())
+		logger.Info("Буду выполнять %d модулей на аккаунте %s\n", numModules, eclipseAcc.PublicKey.String())
 
 		for j := 0; j < numModules; {
 			randomIndex := rand.Intn(len(moduleNames))
@@ -155,7 +155,7 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			j++
 
 			if err == nil || !res {
-				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false)
+				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, true)
 			} else if j < numModules-1 {
 				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false)
 			}
@@ -163,18 +163,19 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 
 		err = notifier.SendWalletMessages(eclipseAcc.PublicKey.String())
 		if err != nil {
-			log.Printf("Ошибка отправки сообщений: %v", err)
+			logger.Error("Ошибка отправки сообщений: %v", err)
 		} else {
-			log.Printf("Сообщения успешно отправлены")
+			logger.Info("Сообщения успешно отправлены в телеграм")
 		}
 
 		if i+1 == len(wallets.Eclipse) {
-			log.Println("Все аккаунты отработаны")
+			fmt.Println()
+			logger.Info("Все аккаунты отработаны")
 			return nil
 		}
 
 		if res {
-			log.Printf("[Thread %d] Accounts [%d/%d] EVM: %s, ECLIPSE: %s successfully ended\n\n",
+			logger.Info("[Thread %d] Accounts [%d/%d] EVM: %s, ECLIPSE: %s successfully ended\n\n",
 				threadNum+1,
 				i+1, len(wallets.EvmAccounts),
 				wallets.EvmAccounts[i].Address.String(),
@@ -182,7 +183,7 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			)
 			randomizer.RandomDelay(cfg.Delay.BetweenAccounts.Min, cfg.Delay.BetweenAccounts.Max, true)
 		} else {
-			log.Printf("[Thread %d] Accounts [%d/%d] EVM: %s, ECLIPSE: %s ended with errors\n\n",
+			logger.Info("[Thread %d] Accounts [%d/%d] EVM: %s, ECLIPSE: %s ended with errors\n\n",
 				threadNum+1,
 				i+1, len(wallets.EvmAccounts),
 				wallets.EvmAccounts[i].Address.String(),

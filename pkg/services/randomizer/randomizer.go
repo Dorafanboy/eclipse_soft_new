@@ -2,7 +2,7 @@
 
 import (
 	"eclipse/internal/base"
-	"log"
+	"eclipse/internal/logger"
 	"math"
 	"math/big"
 	"math/rand"
@@ -41,6 +41,6 @@ func RandomDelay(min, max float64, inMinutes bool) {
 		unitStr = "секунд"
 	}
 
-	log.Printf("Ожидание выполнения: %.2f %s\n", randomDelay, unitStr)
+	logger.Info("Ожидание выполнения: %.2f %s\n", randomDelay, unitStr)
 	time.Sleep(delayDuration)
 }

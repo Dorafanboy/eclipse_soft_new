@@ -4,19 +4,19 @@ import (
 	"context"
 	"eclipse/configs"
 	"eclipse/constants"
+	"eclipse/internal/logger"
 	"eclipse/model"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"log"
 	"math/big"
 	"strconv"
 )
 
 func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData configs.Chain, txData TransactionData) (common.Hash, error) {
-	log.Println("Произвожу вызов функции для Relay бриджа")
+	logger.Info("Произвожу вызов функции для Relay бриджа")
 
 	client, err := ethclient.Dial(chainData.RPC)
 	if err != nil {
@@ -114,7 +114,7 @@ func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData config
 		return constants.ZeroHash, fmt.Errorf("failed to sign tx: %v", err)
 	}
 
-	log.Println("✅ Симуляция успешна! Отправляем транзакцию...")
+	logger.Success("✅ Симуляция успешна! Отправляем транзакцию...")
 
 	err = client.SendTransaction(ctx, signedTx)
 	if err != nil {
@@ -123,7 +123,7 @@ func MakeRelayBridge(ctx context.Context, acc model.EvmAccount, chainData config
 
 	hash := signedTx.Hash()
 
-	log.Printf("Транзакция успешно отправлена %s%s\n", chainData.ScanURL, hash)
+	logger.Success("Транзакция успешно отправлена %s%s\n", chainData.ScanURL, hash)
 	fmt.Println()
 
 	return hash, nil

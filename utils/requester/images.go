@@ -1,9 +1,9 @@
 ﻿package requester
 
 import (
+	"eclipse/internal/logger"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -43,7 +43,7 @@ func getRandomSearchTerm() string {
 
 func GetOneRandomImage(client http.Client) string {
 	searchTerm := getRandomSearchTerm()
-	log.Printf("Searching images for: %s", searchTerm)
+	logger.Info("Searching images for: %s", searchTerm)
 
 	urls := scrapeGoogleImages(client, searchTerm)
 
@@ -53,7 +53,7 @@ func GetOneRandomImage(client http.Client) string {
 		return randomUrl
 	}
 
-	log.Printf("No images found, using fallback URL")
+	logger.Info("No images found, using fallback URL")
 	return "https://ssl.gstatic.com/gb/images/bar/al-icon.png"
 }
 
@@ -63,7 +63,7 @@ func scrapeGoogleImages(client http.Client, searchTerm string) []string {
 
 	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
-		log.Printf("Error creating request: %v", err)
+		logger.Error("Error creating request: %v", err)
 		return nil
 	}
 
@@ -72,14 +72,14 @@ func scrapeGoogleImages(client http.Client, searchTerm string) []string {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error making request: %v", err)
+		logger.Error("Error making request: %v", err)
 		return nil
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response: %v", err)
+		logger.Error("Error reading response: %v", err)
 		return nil
 	}
 

@@ -5,6 +5,7 @@ import (
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
+	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/randomizer"
@@ -13,7 +14,6 @@ import (
 	"fmt"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,7 +53,7 @@ func (m *Module) Execute(
 	notifier *telegram.Notifier,
 	maxAttempts int,
 ) (bool, error) {
-	log.Println("Начал выполнение модуля Lifinity Swap")
+	logger.Info("Начал выполнение модуля Lifinity Swap")
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		firstPair, secondPair, tokenType, err := base.GetRandomTokenPair(cfg.Tokens)
@@ -112,11 +112,11 @@ func (m *Module) Execute(
 
 		err = balance.CheckAndWaitForBalance(ctx, client, params, amountDecimals, 3)
 		if err != nil {
-			log.Printf("Insufficient balance for pair (attempt %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("Insufficient balance for pair (attempt %d/%d): %v", attempt+1, maxAttempts, err)
 			continue
 		}
 
-		log.Printf("Пытаюсь выполнить свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
+		logger.Info("Пытаюсь выполнить свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
 
 		swapParams := SwapParams{
 			Amount:    value,
@@ -128,7 +128,7 @@ func (m *Module) Execute(
 
 		sig, err := ExecuteSwap(ctx, client, swapParams)
 		if err != nil {
-			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {

@@ -5,13 +5,13 @@ import (
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
+	"eclipse/internal/logger"
 	"eclipse/model"
 	"eclipse/pkg/interfaces"
 	"eclipse/pkg/services/randomizer"
 	"eclipse/pkg/services/telegram"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
-	"log"
 	"time"
 )
 
@@ -27,7 +27,7 @@ func (m *Module) Execute(
 	accountIndex int,
 	maxAttempts int,
 ) (bool, error) {
-	log.Println("Начал выполнение модуля Orca Swap")
+	logger.Info("Начал выполнение модуля Orca Swap")
 
 	var value float64
 	var valueStr string
@@ -67,7 +67,7 @@ func (m *Module) Execute(
 			return false, fmt.Errorf("unknown token type: %s", tokenType)
 		}
 
-		log.Printf("Буду выполнять свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
+		logger.Info("Буду выполнять свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
 
 		params := SwapQuoteParams{
 			FromToken:            firstPair.Address.String(),
@@ -95,7 +95,7 @@ func (m *Module) Execute(
 
 		sig, err := SimulateAndSendTransaction(ctx, rpcClient, instructions, acc.PrivateKey)
 		if err != nil {
-			log.Printf("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
+			logger.Error("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
 		} else {

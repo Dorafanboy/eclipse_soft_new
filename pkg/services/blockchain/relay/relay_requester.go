@@ -2,9 +2,9 @@
 
 import (
 	"bytes"
+	"eclipse/internal/logger"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -74,6 +74,6 @@ func GetRelayData(client http.Client, request RelayRequest) (*TransactionData, e
 		return nil, fmt.Errorf("no transaction data in response")
 	}
 
-	log.Println("Успешно получил данные для выполнение Relay бриджа")
+	logger.Success("Успешно получил данные для выполнение Relay бриджа")
 	return &relayResponse.Steps[0].Items[0].Data, nil
 }

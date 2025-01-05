@@ -1,9 +1,9 @@
 ﻿package managers
 
 import (
+	"eclipse/internal/logger"
 	"eclipse/pkg/interfaces"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 )
@@ -28,7 +28,7 @@ func NewProxyManager(proxies []string, accountsCount int) *ProxyManager {
 		}
 	}
 
-	log.Printf("Прокси настроены | подгружены %d прокси и %d аккаунтов | будет использоваться %d аккаунтов на 1 прокси",
+	logger.Info("Прокси настроены | подгружены %d прокси и %d аккаунтов | будет использоваться %d аккаунтов на 1 прокси",
 		len(proxies),
 		accountsCount,
 		accountsPerProxy,
@@ -65,14 +65,14 @@ func (pm *ProxyManager) GetProxyForAccount(accountIndex int) string {
 	}
 
 	proxy := pm.proxies[proxyIndex]
-	log.Printf("Аккаунт %d использует прокси: http://%s", accountIndex+1, proxy)
+	logger.Info("Аккаунт %d использует прокси: http://%s", accountIndex+1, proxy)
 	return proxy
 }
 
 func (pm *ProxyManager) parseProxy(proxyURL string) *url.URL {
 	parsedURL, err := url.Parse(fmt.Sprintf("http://%s", proxyURL))
 	if err != nil {
-		log.Printf("Ошибка парсинга прокси %s: %v", proxyURL, err)
+		logger.Error("Ошибка парсинга прокси %s: %v", proxyURL, err)
 		return nil
 	}
 	return parsedURL
