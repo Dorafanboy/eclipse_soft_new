@@ -9,6 +9,7 @@ import (
 	"eclipse/storage"
 	"eclipse/utils/format"
 	"eclipse/utils/managers"
+	"eclipse/utils/shuffle"
 	"fmt"
 	"time"
 )
@@ -20,6 +21,20 @@ func main() {
 }
 
 func run() error {
+	appCfg, err := configs.NewAppConfig()
+	if err != nil {
+		return err
+	}
+
+	if appCfg.IsShuffle {
+		logger.Info("Включен режим перемешивания кошельков")
+
+		err = shuffle.ShuffleFiles("../data/evm_private_keys.txt", "../data/eclipse_private_keys.txt")
+		if err != nil {
+			return err
+		}
+	}
+
 	wallets, err := storage.LoadWallets("../data/evm_private_keys.txt", "../data/eclipse_private_keys.txt")
 	if err != nil {
 		return err
@@ -46,11 +61,6 @@ func run() error {
 	logger.Info("Успешно подгрузил %d, EVM кошельков, %d, ECLIPSE кошельков, %d прокси", len(evmWallets), len(eclipseWallets), len(proxies))
 
 	proxyManager := managers.NewProxyManager(proxies, len(wallets.EvmAccounts))
-
-	appCfg, err := configs.NewAppConfig()
-	if err != nil {
-		return err
-	}
 
 	logger.Info("Успешно подгрузил конфиг")
 	if appCfg.Threads.Enabled {

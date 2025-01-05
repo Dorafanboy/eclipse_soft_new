@@ -28,6 +28,7 @@ type AppConfig struct {
 	Modules   *ModulesConfig
 	Threads   ThreadConfig `yaml:"threads"`
 	Telegram  *TelegramConfig
+	IsShuffle bool `yaml:"is_shuffle"`
 }
 
 type Token struct {
@@ -85,7 +86,8 @@ func NewAppConfig() (*AppConfig, error) {
 	}
 
 	var wrapper struct {
-		Threads ThreadConfig `yaml:"threads"`
+		Threads   ThreadConfig `yaml:"threads"`
+		IsShuffle bool         `yaml:"is_shuffle"`
 	}
 	if err := yaml.Unmarshal(data, &wrapper); err != nil {
 		return nil, err
@@ -99,6 +101,7 @@ func NewAppConfig() (*AppConfig, error) {
 		Modules:   modulesConfig,
 		Threads:   wrapper.Threads,
 		Telegram:  telegramConfig,
+		IsShuffle: wrapper.IsShuffle,
 	}, nil
 }
 
