@@ -3,6 +3,7 @@
 import (
 	"eclipse/configs"
 	"eclipse/pkg/interfaces"
+	"eclipse/pkg/services/blockchain/gas_station"
 	"eclipse/pkg/services/blockchain/invariant"
 	"eclipse/pkg/services/blockchain/lifinity"
 	"eclipse/pkg/services/blockchain/orca"
@@ -63,6 +64,14 @@ func NewModuleManager(cfg configs.ModulesConfig) *ModuleManager {
 	if cfg.Enabled.Solar {
 		enabledModules["Solar"] = interfaces.ModuleInfo{
 			Module: &solar.Module{},
+			Type:   interfaces.DefaultType,
+		}
+		moduleCount++
+	}
+
+	if cfg.Enabled.GasStation {
+		enabledModules["Gas Station"] = interfaces.ModuleInfo{
+			Module: &gas_station.Module{},
 			Type:   interfaces.DefaultType,
 		}
 		moduleCount++

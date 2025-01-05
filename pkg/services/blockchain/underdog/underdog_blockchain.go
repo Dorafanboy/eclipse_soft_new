@@ -37,24 +37,31 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 	if err != nil {
 		return solana.Signature{}, fmt.Errorf("error sending transaction: %v", err)
 	}
-
-	logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
-
-	maxAttempts := 30
+	
+	maxAttempts := 15
 	for i := 0; i < maxAttempts; i++ {
-		time.Sleep(time.Second)
-		status, err := client.GetSignatureStatuses(ctx, true, sig)
+		response, err := client.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
+			Commitment: rpc.CommitmentConfirmed,
+		})
 		if err != nil {
-			logger.Error("Error checking status: %v\n", err)
-			continue
-		}
-		if status.Value[0] != nil {
-			if status.Value[0].Err != nil {
-				return solana.Signature{}, fmt.Errorf("transaction failed: %v", status.Value[0].Err)
+			if i < maxAttempts-1 {
+				logger.Info("Attempt %d: Waiting for confirmation... (%v)", i+1, err)
+				time.Sleep(time.Second * 3)
+				continue
 			}
+			return sig, fmt.Errorf("transaction failed: %v", err)
+		}
+
+		if response != nil {
+			if response.Meta.Err != nil {
+				return sig, fmt.Errorf("transaction failed with error: %v", response.Meta.Err)
+			}
+			logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
 			return sig, nil
 		}
+
+		time.Sleep(time.Second * 3)
 	}
 
-	return solana.Signature{}, fmt.Errorf("transaction confirmation timeout")
+	return sig, fmt.Errorf("transaction not confirmed after %d attempts", maxAttempts)
 }

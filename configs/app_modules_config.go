@@ -13,12 +13,13 @@ type ModulesCountConfig struct {
 }
 
 type EnabledModulesConfig struct {
-	Orca      bool `yaml:"orca"`
-	Lifinity  bool `yaml:"lifinity"`
-	Invariant bool `yaml:"invariant"`
-	Relay     bool `yaml:"relay"`
-	Solar     bool `yaml:"solar"`
-	Underdog  bool `yaml:"underdog"`
+	Orca       bool `yaml:"orca"`
+	Lifinity   bool `yaml:"lifinity"`
+	Invariant  bool `yaml:"invariant"`
+	Relay      bool `yaml:"relay"`
+	Solar      bool `yaml:"solar"`
+	Underdog   bool `yaml:"underdog"`
+	GasStation bool `yaml:"gas_station"`
 }
 
 type ModulesConfig struct {

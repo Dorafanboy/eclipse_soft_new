@@ -79,12 +79,13 @@ func run() error {
 	logger.Info("Включенные модули")
 	logger.Info("━━━━━━━━━━━━━━━━━━━━━━")
 
-	logger.Info("• Orca:      %v", format.FormatStatus(appCfg.Modules.Enabled.Orca))
-	logger.Info("• Lifinity:  %v", format.FormatStatus(appCfg.Modules.Enabled.Lifinity))
-	logger.Info("• Invariant: %v", format.FormatStatus(appCfg.Modules.Enabled.Invariant))
-	logger.Info("• Relay:     %v", format.FormatStatus(appCfg.Modules.Enabled.Relay))
-	logger.Info("• Solar:     %v", format.FormatStatus(appCfg.Modules.Enabled.Solar))
-	logger.Info("• Underdog:  %v", format.FormatStatus(appCfg.Modules.Enabled.Underdog))
+	logger.Info("• Orca:         %v", format.FormatStatus(appCfg.Modules.Enabled.Orca))
+	logger.Info("• Lifinity:     %v", format.FormatStatus(appCfg.Modules.Enabled.Lifinity))
+	logger.Info("• Invariant:    %v", format.FormatStatus(appCfg.Modules.Enabled.Invariant))
+	logger.Info("• Relay:        %v", format.FormatStatus(appCfg.Modules.Enabled.Relay))
+	logger.Info("• Solar:        %v", format.FormatStatus(appCfg.Modules.Enabled.Solar))
+	logger.Info("• Underdog:     %v", format.FormatStatus(appCfg.Modules.Enabled.Underdog))
+	logger.Info("• Gas Station:  %v", format.FormatStatus(appCfg.Modules.Enabled.GasStation))
 
 	logger.Info("━━━━━━━━━━━━━━━━━━━━━━\n")
 

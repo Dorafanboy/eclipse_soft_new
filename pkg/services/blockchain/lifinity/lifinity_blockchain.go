@@ -401,29 +401,30 @@ func ExecuteTransaction(ctx context.Context, client *rpc.Client, instructions []
 
 	time.Sleep(time.Second * 1)
 
-	maxAttempts := 10
+	maxAttempts := 15
 	for i := 0; i < maxAttempts; i++ {
 		response, err := client.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
-			Commitment: rpc.CommitmentFinalized,
+			Commitment: rpc.CommitmentConfirmed,
 		})
 		if err != nil {
-			continue
+			if i < maxAttempts-1 {
+				logger.Info("Attempt %d: Waiting for confirmation... (%v)", i+1, err)
+				time.Sleep(time.Second * 3)
+				continue
+			}
+			return sig, fmt.Errorf("transaction failed: %v", err)
 		}
 
 		if response != nil {
-			fmt.Println("Transaction confirmed!")
-			break
+			if response.Meta.Err != nil {
+				return sig, fmt.Errorf("transaction failed with error: %v", response.Meta.Err)
+			}
+			logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
+			return sig, nil
 		}
 
-		if i == maxAttempts-1 {
-			fmt.Println("Transaction confirmation timeout")
-			break
-		}
-
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 3)
 	}
 
-	logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
-
-	return sig, nil
+	return sig, fmt.Errorf("transaction not confirmed after %d attempts", maxAttempts)
 }

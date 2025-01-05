@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"time"
 )
 
 type SpecialAccount struct {
@@ -84,6 +85,30 @@ func SimulateAndSendTransaction(ctx context.Context, client *rpc.Client, instruc
 		return solana.Signature{}, fmt.Errorf("transaction execution failed: %v", err)
 	}
 
-	logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
-	return sig, nil
+	maxAttempts := 15
+	for i := 0; i < maxAttempts; i++ {
+		response, err := client.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
+			Commitment: rpc.CommitmentConfirmed,
+		})
+		if err != nil {
+			if i < maxAttempts-1 {
+				logger.Info("Attempt %d: Waiting for confirmation... (%v)", i+1, err)
+				time.Sleep(time.Second * 3)
+				continue
+			}
+			return sig, fmt.Errorf("transaction failed: %v", err)
+		}
+
+		if response != nil {
+			if response.Meta.Err != nil {
+				return sig, fmt.Errorf("transaction failed with error: %v", response.Meta.Err)
+			}
+			logger.Success("Transaction sent succesfully: %s%s", constants.EclipseScan, sig)
+			return sig, nil
+		}
+
+		time.Sleep(time.Second * 3)
+	}
+
+	return sig, fmt.Errorf("transaction not confirmed after %d attempts", maxAttempts)
 }

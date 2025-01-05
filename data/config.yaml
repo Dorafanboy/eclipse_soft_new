@@ -50,12 +50,13 @@ modules:
     min: 2
     max: 2
   enabled: # какие модули выполнять (ставить true/false)
-    orca: true
-    lifinity: true
+    orca: false
+    lifinity: false
     invariant: false
     relay: false
     solar: false
     underdog: false
+    gas_station: true
   
 threads:
   count: 1  # количество одновременно работающих аккаунтов
@@ -66,5 +67,5 @@ is_shuffle: false # шафлить ли кошельки перед работа
 telegram: # слать ли уведомления в телеграм
   enabled: true # true если надо(заполнять поля ниже), false если нет
   bot_token: "" # создать бота у @BotFather
-  user_id: 1234 # айдишник можно получить здесь @getmyid_bot
+  user_id:  # айдишник можно получить здесь @getmyid_bot
   
