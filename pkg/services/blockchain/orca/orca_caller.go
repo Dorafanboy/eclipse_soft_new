@@ -32,7 +32,7 @@ func (m *Module) Execute(
 	var value float64
 	var valueStr string
 
-	for attempt := 0; attempt < maxAttempts; maxAttempts++ {
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		firstPair, secondPair, tokenType, err := base.GetRandomTokenPair(cfg.Tokens)
 		if err != nil {
 			return false, err
