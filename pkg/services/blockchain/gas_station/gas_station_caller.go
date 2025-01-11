@@ -11,12 +11,13 @@ import (
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
 	"fmt"
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
 var usdc = "AKEWE7Bgh87GPp171b4cJPSSZfmZwQ3KaqYqXoKLNAEE"
@@ -27,7 +28,7 @@ func (m *Module) Execute(
 	ctx context.Context,
 	httpClient http.Client,
 	rpcClient *rpc.Client,
-	cfg configs.InvariantConfig,
+	cfg configs.AppConfig,
 	acc *model.EclipseAccount,
 	notifier *telegram.Notifier,
 	maxAttempts int,
@@ -36,10 +37,10 @@ func (m *Module) Execute(
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		value, valueStr := randomizer.GetRandomValueWithPrecision(
-			cfg.Stable.MinValue,
-			cfg.Stable.MaxValue,
-			cfg.Stable.MinPrecision,
-			cfg.Stable.MaxPrecision,
+			cfg.Invariant.Stable.MinValue,
+			cfg.Invariant.Stable.MaxValue,
+			cfg.Invariant.Stable.MinPrecision,
+			cfg.Invariant.Stable.MaxPrecision,
 			float64(6),
 		)
 
@@ -58,7 +59,7 @@ func (m *Module) Execute(
 			TokenDecimals: 6,
 		}
 
-		err = balance.CheckAndWaitForBalance(ctx, rpcClient, params, amountDecimals, 3)
+		err = balance.CheckAndWaitForBalance(ctx, rpcClient, params, amountDecimals, maxAttempts, cfg.MinEthHold)
 		if err != nil {
 			logger.Error("Insufficient balance for USDC (attempt %d/%d): %v", attempt+1, maxAttempts, err)
 			continue

@@ -5,11 +5,12 @@ import (
 	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"fmt"
-	"github.com/gagliardetto/solana-go/rpc"
 	"math"
 	"math/big"
 	"strconv"
 	"time"
+
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
 func GetTokenBalance(ctx context.Context, client *rpc.Client, params token.SwapInstructions) (uint64, error) {
@@ -51,13 +52,18 @@ func GetTokenBalance(ctx context.Context, client *rpc.Client, params token.SwapI
 	}
 }
 
-func CheckAndWaitForBalance(ctx context.Context, client *rpc.Client, params token.SwapInstructions, requiredAmount uint64, maxAttempts int) error {
+func CheckAndWaitForBalance(ctx context.Context, client *rpc.Client, params token.SwapInstructions, requiredAmount uint64, maxAttempts int, minEthHold float64) error {
 	tokenName := "ETH"
 	decimals := float64(9)
 
 	if !params.IsETH {
 		tokenName = params.TokenSymbol
 		decimals = float64(params.TokenDecimals)
+	}
+
+	if params.IsETH {
+		holdAmount := uint64(minEthHold * math.Pow(10, decimals))
+		requiredAmount += holdAmount
 	}
 
 	reqFloat := new(big.Float).SetUint64(requiredAmount)

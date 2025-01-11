@@ -30,7 +30,7 @@ type OrcaModule interface {
 	Execute(
 		ctx context.Context,
 		rpcClient *rpc.Client,
-		cfg configs.InvariantConfig,
+		cfg configs.AppConfig,
 		acc *model.EclipseAccount,
 		proxyManager ProxyManagerInterface,
 		notifier *telegram.Notifier,
@@ -47,6 +47,7 @@ type UnderdogModule interface {
 		acc *model.EclipseAccount,
 		notifier *telegram.Notifier,
 		words []string,
+		minEthHold float64,
 		maxAttempts int,
 	) (bool, error)
 }
@@ -56,7 +57,7 @@ type DefaultModule interface {
 		ctx context.Context,
 		httpClient http.Client,
 		rpcClient *rpc.Client,
-		cfg configs.InvariantConfig,
+		cfg configs.AppConfig,
 		acc *model.EclipseAccount,
 		notifier *telegram.Notifier,
 		maxAttempts int,

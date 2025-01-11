@@ -5,6 +5,7 @@ import (
 	"eclipse/constants"
 	"eclipse/internal/logger"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -37,7 +38,7 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 	if err != nil {
 		return solana.Signature{}, fmt.Errorf("error sending transaction: %v", err)
 	}
-	
+
 	maxAttempts := 15
 	for i := 0; i < maxAttempts; i++ {
 		response, err := client.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
@@ -64,4 +65,48 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 	}
 
 	return sig, fmt.Errorf("transaction not confirmed after %d attempts", maxAttempts)
+}
+
+func EstimateTransactionFee(ctx context.Context, client *rpc.Client, encodedTx string) (uint64, error) {
+	txBytes, err := base64.StdEncoding.DecodeString(encodedTx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode base64: %v", err)
+	}
+
+	tx, err := solana.TransactionFromBytes(txBytes)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode transaction: %v", err)
+	}
+
+	response, err := client.GetRecentBlockhash(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get recent blockhash: %v", err)
+	}
+
+	feeRate := response.Value.FeeCalculator.LamportsPerSignature
+	totalFee := feeRate * uint64(len(tx.Signatures))
+
+	return totalFee, nil
+}
+
+func GetTransactionAmount(encodedTx string) (uint64, error) {
+	txBytes, err := base64.StdEncoding.DecodeString(encodedTx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode base64: %v", err)
+	}
+
+	tx, err := solana.TransactionFromBytes(txBytes)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode transaction: %v", err)
+	}
+
+	if len(tx.Message.Instructions) > 0 {
+		instruction := tx.Message.Instructions[0]
+		if len(instruction.Data) >= 8 {
+			amount := binary.LittleEndian.Uint64(instruction.Data[:8])
+			return amount, nil
+		}
+	}
+
+	return 0, fmt.Errorf("could not find amount in transaction")
 }

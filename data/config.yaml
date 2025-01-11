@@ -1,7 +1,7 @@
 ﻿eth_bridge: # сколько ETH бриджи в Eclipse
   min_balance: 0.0001 # если баланс ETH в Eclipse выше этого числа, бриджа не будет в Eclipse
-  min_value: 0.0012
-  max_value: 0.0017
+  min_value: 0.0015
+  max_value: 0.006
   min_precision: 4    # минимальное количество знаков после запятой
   max_precision: 6    # максимальное количество знаков после запятой
   
@@ -14,55 +14,66 @@ networks: # из каких сетей бриджить в Eclipse (беретс
   - "Scroll"
   #- "ZkSync"
     
+min_eth_hold: 0.0002 # сколько максимум эфира можно оставлять на балансе аккаунта
+
 swaps: # токены, который будут использоваться для свапов (работает пока что только ETH/USDC)
   tokens: [ "ETH", "USDC" ] #"SOL", "USDT" 
   native: # сколько свапать ETH
     eth: # сколько свапать ETH
-      min_value: 0.00002
-      max_value: 0.00008
+      min_value: 0.00033
+      max_value: 0.001
       min_precision: 5
       max_precision: 8
     sol: # пока что ни на что не влияет
-      min_value: 0.01
-      max_value: 0.02
-      min_precision: 4
-      max_precision: 6
+      min_value: 0.4
+      max_value: 1
+      min_precision: 2
+      max_precision: 4
   stable: # сколько свапать USDC
-    min_value: 0.1
-    max_value: 0.5
+    min_value: 0.4
+    max_value: 1
     min_precision: 2
-    max_precision: 2
+    max_precision: 4
     
 delay: # задержки
   between_accounts: # задержка между аккаунтами (в минутах)
-    min: 30  
-    max: 60  
+    min: 15  
+    max: 30  
   between_modules: # задержка между модулями (в минутах)
-    min: 1
+    min: 2
     max: 5
   between_retries: # задержка между повторными попытками (в секундах)
     min: 5
     max: 15
-    attempts: 7  # максимальное количество попыток
+    attempts: 10  # максимальное количество попыток
     
 modules:
-  modules_count: # сколько модулей выполнять
-    min: 2
-    max: 2
-  enabled: # какие модули выполнять (ставить true/false)
+  mode: "eth"    # режим работы, если "random" то будут выполнены модули в рандомном порядке, если "sequence" то по последовательности
+  modules_count:
+    min: 1
+    max: 1
+  sequence: # последовательность выполнения модулей (работает только если mode: "sequence")
+    #- "Relay"
+    - "Orca"
+    #- "Lifinity"
+   # - "Invariant"
+    #- "Solar"
+    #- "Underdog"
+    - "Gas Station"
+  enabled:
     orca: false
     lifinity: false
     invariant: false
     relay: false
     solar: false
     underdog: false
-    gas_station: true
+    gas_station: false
   
 threads:
   count: 1  # количество одновременно работающих аккаунтов
-  enabled: true  # включить/выключить многопоточность
+  enabled: false  # включить/выключить многопоточность
   
-is_shuffle: false # шафлить ли кошельки перед работай, (ставить true/false, true если надо, false значит нет)
+is_shuffle: false # шафлить ли кошельки перед работой, (ставить true/false, true если надо, false значит нет)
   
 telegram: # слать ли уведомления в телеграм
   enabled: true # true если надо(заполнять поля ниже), false если нет

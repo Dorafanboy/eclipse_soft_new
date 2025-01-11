@@ -21,14 +21,15 @@ type ThreadConfig struct {
 }
 
 type AppConfig struct {
-	Orca      *OrcaConfig
-	Invariant *InvariantConfig
-	Relay     *RelayConfig
-	Delay     *DelayConfig
-	Modules   *ModulesConfig
-	Threads   ThreadConfig `yaml:"threads"`
-	Telegram  *TelegramConfig
-	IsShuffle bool `yaml:"is_shuffle"`
+	Orca       *OrcaConfig
+	Invariant  *InvariantConfig
+	Relay      *RelayConfig
+	Delay      *DelayConfig
+	Modules    *ModulesConfig
+	Threads    ThreadConfig `yaml:"threads"`
+	Telegram   *TelegramConfig
+	IsShuffle  bool    `yaml:"is_shuffle"`
+	MinEthHold float64 `yaml:"min_eth_hold"`
 }
 
 type Token struct {
@@ -86,22 +87,24 @@ func NewAppConfig() (*AppConfig, error) {
 	}
 
 	var wrapper struct {
-		Threads   ThreadConfig `yaml:"threads"`
-		IsShuffle bool         `yaml:"is_shuffle"`
+		Threads    ThreadConfig `yaml:"threads"`
+		IsShuffle  bool         `yaml:"is_shuffle"`
+		MinEthHold float64      `yaml:"min_eth_hold"`
 	}
 	if err := yaml.Unmarshal(data, &wrapper); err != nil {
 		return nil, err
 	}
 
 	return &AppConfig{
-		Orca:      orcaConfig,
-		Invariant: invariantConfig,
-		Relay:     relayConfig,
-		Delay:     delayConfig,
-		Modules:   modulesConfig,
-		Threads:   wrapper.Threads,
-		Telegram:  telegramConfig,
-		IsShuffle: wrapper.IsShuffle,
+		Orca:       orcaConfig,
+		Invariant:  invariantConfig,
+		Relay:      relayConfig,
+		Delay:      delayConfig,
+		Modules:    modulesConfig,
+		Threads:    wrapper.Threads,
+		Telegram:   telegramConfig,
+		IsShuffle:  wrapper.IsShuffle,
+		MinEthHold: wrapper.MinEthHold,
 	}, nil
 }
 

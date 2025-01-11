@@ -3,8 +3,9 @@
 import (
 	"eclipse/constants"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 type ModulesCountConfig struct {
@@ -24,6 +25,8 @@ type EnabledModulesConfig struct {
 
 type ModulesConfig struct {
 	ModulesCount ModulesCountConfig   `yaml:"modules_count"`
+	Mode         string               `yaml:"mode"`
+	Sequence     []string             `yaml:"sequence"`
 	Enabled      EnabledModulesConfig `yaml:"enabled"`
 }
 

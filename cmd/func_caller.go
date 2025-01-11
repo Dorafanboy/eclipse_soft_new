@@ -6,16 +6,23 @@ import (
 	"eclipse/internal/base"
 	"eclipse/internal/logger"
 	"eclipse/pkg/interfaces"
+	"eclipse/pkg/services/blockchain/gas_station"
+	"eclipse/pkg/services/blockchain/invariant"
+	"eclipse/pkg/services/blockchain/lifinity"
+	"eclipse/pkg/services/blockchain/orca"
 	"eclipse/pkg/services/blockchain/relay"
+	"eclipse/pkg/services/blockchain/solar"
+	"eclipse/pkg/services/blockchain/underdog"
 	"eclipse/pkg/services/file"
 	"eclipse/pkg/services/randomizer"
 	"eclipse/pkg/services/telegram"
 	"eclipse/storage"
 	"eclipse/utils/managers"
 	"fmt"
-	"github.com/gagliardetto/solana-go/rpc"
 	"math/rand"
 	"sync"
+
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
 func StartSoft(wallets storage.WalletStorage, cfg configs.AppConfig, moduleManager *managers.ModuleManager, proxyManager *managers.ProxyManager, notifier *telegram.Notifier, lists *file.WordLists) error {
@@ -94,9 +101,7 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			eclipseAcc.PublicKey.String(),
 		)
 
-		moduleInfo := moduleManager.EnabledModules["Relay"]
-
-		if cfg.Modules.Enabled.Relay {
+		if cfg.Modules.Mode == "random" && cfg.Modules.Enabled.Relay {
 			relayModule := relay.Module{}
 			res, err = relayModule.Execute(
 				ctx,
@@ -113,50 +118,149 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 				logger.Error("[Thread %d] Error: %v", threadNum+1, err)
 			}
 
-			if err == nil || !res {
+			if err == nil || res {
 				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, true)
-			} else {
+			} else if err != nil {
 				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false)
 			}
 		}
 
-		numModules := base.GetRandomPrecision(
-			cfg.Modules.ModulesCount.Min,
-			cfg.Modules.ModulesCount.Max,
-		)
-
 		fmt.Println()
-		logger.Info("Буду выполнять %d модулей на аккаунте %s\n", numModules, eclipseAcc.PublicKey.String())
 
-		for j := 0; j < numModules; {
-			randomIndex := rand.Intn(len(moduleNames))
-			moduleName := moduleNames[randomIndex]
-
-			if moduleName == "Relay" {
-				continue
+		var modulesToExecute []string
+		if cfg.Modules.Mode == "random" {
+			availableModules := make([]string, 0)
+			for name := range moduleManager.EnabledModules {
+				if name != "Relay" {
+					availableModules = append(availableModules, name)
+				}
 			}
 
+			numModules := base.GetRandomPrecision(
+				cfg.Modules.ModulesCount.Min,
+				cfg.Modules.ModulesCount.Max,
+			)
+
+			for j := 0; j < numModules; j++ {
+				randomIndex := rand.Intn(len(availableModules))
+				modulesToExecute = append(modulesToExecute, availableModules[randomIndex])
+			}
+
+			logger.Info("Буду выполнять %d модулей на аккаунте %s\n", numModules, eclipseAcc.PublicKey.String())
+
+		} else if cfg.Modules.Mode == "queue" {
+			modulesToExecute = cfg.Modules.Sequence
+			logger.Info("Буду выполнять %d модулей на аккаунте %s\n", len(modulesToExecute), eclipseAcc.PublicKey.String())
+		} else if cfg.Modules.Mode == "eth" {
+			swapModules := []string{"Orca", "Solar", "Invariant", "Lifinity"}
+			randomModule := swapModules[rand.Intn(len(swapModules))]
+			modulesToExecute = []string{randomModule}
+			logger.Info("Буду выполнять %d модулей на аккаунте %s\n", len(modulesToExecute), eclipseAcc.PublicKey.String())
+		}
+
+		for moduleIndex, moduleName := range modulesToExecute {
 			fmt.Println()
-			moduleInfo = moduleManager.EnabledModules[moduleName]
+			logger.Info("Выполняю модуль %d/%d: %s", moduleIndex+1, len(modulesToExecute), moduleName)
+
+			var moduleInfo interfaces.ModuleInfo
+			if cfg.Modules.Mode == "random" {
+				var exists bool
+				moduleInfo, exists = moduleManager.EnabledModules[moduleName]
+				if !exists {
+					logger.Error("Модуль %s не найден", moduleName)
+					continue
+				}
+			} else if cfg.Modules.Mode == "queue" {
+				switch moduleName {
+				case "Orca":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &orca.Module{},
+						Type:   interfaces.OrcaType,
+					}
+				case "Underdog":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &underdog.Module{},
+						Type:   interfaces.UnderdogType,
+					}
+				case "Invariant":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &invariant.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				case "Relay":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &relay.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				case "Lifinity":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &lifinity.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				case "Solar":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &solar.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				case "Gas Station":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &gas_station.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				default:
+					logger.Error("Неизвестный модуль: %s", moduleName)
+					continue
+				}
+			} else if cfg.Modules.Mode == "eth" {
+				switch moduleName {
+				case "Orca":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &orca.Module{},
+						Type:   interfaces.OrcaType,
+					}
+				case "Solar":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &solar.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				case "Invariant":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &invariant.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				case "Lifinity":
+					moduleInfo = interfaces.ModuleInfo{
+						Module: &lifinity.Module{},
+						Type:   interfaces.DefaultType,
+					}
+				}
+
+				logger.Info("Режим ETH: используем %s для свапа USDC -> ETH", moduleName)
+
+				if err != nil {
+					logger.Error("[Thread %d] Error during ETH swap: %v", threadNum+1, err)
+				}
+			}
 
 			switch moduleInfo.Type {
 			case interfaces.OrcaType:
 				module := moduleInfo.Module.(interfaces.OrcaModule)
-				res, err = module.Execute(ctx, rpcClient, *cfg.Invariant, eclipseAcc, proxyManager, notifier, i, cfg.Delay.BetweenRetries.Attempts)
+				res, err = module.Execute(ctx, rpcClient, cfg, eclipseAcc, proxyManager, notifier, i, cfg.Delay.BetweenRetries.Attempts)
 
 			case interfaces.UnderdogType:
 				module := moduleInfo.Module.(interfaces.UnderdogModule)
-				res, err = module.Execute(ctx, *httpClient, rpcClient, eclipseAcc, notifier, lists.Words, cfg.Delay.BetweenRetries.Attempts)
+				res, err = module.Execute(ctx, *httpClient, rpcClient, eclipseAcc, notifier, lists.Words, cfg.MinEthHold, cfg.Delay.BetweenRetries.Attempts)
 
 			case interfaces.DefaultType:
 				module := moduleInfo.Module.(interfaces.DefaultModule)
-				res, err = module.Execute(ctx, *httpClient, rpcClient, *cfg.Invariant, eclipseAcc, notifier, cfg.Delay.BetweenRetries.Attempts)
+				res, err = module.Execute(ctx, *httpClient, rpcClient, cfg, eclipseAcc, notifier, cfg.Delay.BetweenRetries.Attempts)
 			}
-			j++
 
-			if err == nil || !res {
+			if moduleIndex == len(modulesToExecute)-1 {
+				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false)
+			} else if err == nil || res {
 				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, true)
-			} else if j < numModules-1 {
+			} else {
 				randomizer.RandomDelay(cfg.Delay.BetweenModules.Min, cfg.Delay.BetweenModules.Max, false)
 			}
 		}
@@ -194,4 +298,25 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 	}
 
 	return nil
+}
+
+func isModuleEnabled(moduleName string, enabled configs.EnabledModulesConfig) bool {
+	switch moduleName {
+	case "Orca":
+		return enabled.Orca
+	case "Lifinity":
+		return enabled.Lifinity
+	case "Invariant":
+		return enabled.Invariant
+	case "Relay":
+		return enabled.Relay
+	case "Solar":
+		return enabled.Solar
+	case "Underdog":
+		return enabled.Underdog
+	case "GasStation":
+		return enabled.GasStation
+	default:
+		return false
+	}
 }

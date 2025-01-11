@@ -76,16 +76,28 @@ func run() error {
 		return err
 	}
 
-	logger.Info("Включенные модули")
-	logger.Info("━━━━━━━━━━━━━━━━━━━━━━")
+	if appCfg.Modules.Mode == "random" {
+		logger.Info("Включен режим рандомного запуска модулей")
+		logger.Info("Включенные модули:")
+		logger.Info("━━━━━━━━━━━━━━━━━━━━━━")
+		logger.Info("• Orca:         %v", format.FormatStatus(appCfg.Modules.Enabled.Orca))
+		logger.Info("• Lifinity:     %v", format.FormatStatus(appCfg.Modules.Enabled.Lifinity))
+		logger.Info("• Invariant:    %v", format.FormatStatus(appCfg.Modules.Enabled.Invariant))
+		logger.Info("• Relay:        %v", format.FormatStatus(appCfg.Modules.Enabled.Relay))
+		logger.Info("• Solar:        %v", format.FormatStatus(appCfg.Modules.Enabled.Solar))
+		logger.Info("• Underdog:     %v", format.FormatStatus(appCfg.Modules.Enabled.Underdog))
+		logger.Info("• Gas Station:  %v", format.FormatStatus(appCfg.Modules.Enabled.GasStation))
+	} else if appCfg.Modules.Mode == "eth" {
+		logger.Info("Включен режим ETH свапов(будут свапы всех балансов в ETH через рандомные свапалки ")
+	} else {
+		logger.Info("Включен режим последовательного запуска модулей")
+		logger.Info("Последовательность выполнения модулей:")
+		logger.Info("━━━━━━━━━━━━━━━━━━━━━━")
 
-	logger.Info("• Orca:         %v", format.FormatStatus(appCfg.Modules.Enabled.Orca))
-	logger.Info("• Lifinity:     %v", format.FormatStatus(appCfg.Modules.Enabled.Lifinity))
-	logger.Info("• Invariant:    %v", format.FormatStatus(appCfg.Modules.Enabled.Invariant))
-	logger.Info("• Relay:        %v", format.FormatStatus(appCfg.Modules.Enabled.Relay))
-	logger.Info("• Solar:        %v", format.FormatStatus(appCfg.Modules.Enabled.Solar))
-	logger.Info("• Underdog:     %v", format.FormatStatus(appCfg.Modules.Enabled.Underdog))
-	logger.Info("• Gas Station:  %v", format.FormatStatus(appCfg.Modules.Enabled.GasStation))
+		for i, moduleName := range appCfg.Modules.Sequence {
+			logger.Info("• %d. %s", i+1, moduleName)
+		}
+	}
 
 	logger.Info("━━━━━━━━━━━━━━━━━━━━━━\n")
 
