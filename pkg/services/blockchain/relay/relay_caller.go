@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/logger"
@@ -28,6 +29,7 @@ func (m *Module) Execute(
 	rpcClient *rpc.Client,
 	httpClient http.Client,
 	notifier *telegram.Notifier,
+	db *sql.DB,
 	maxAttempts int,
 ) (bool, error) {
 	logger.Info("Начал выполнение модуля Relay Bridge")

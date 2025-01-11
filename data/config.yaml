@@ -40,25 +40,25 @@ delay: # задержки
     min: 15  
     max: 30  
   between_modules: # задержка между модулями (в минутах)
-    min: 2
-    max: 5
+    min: 1
+    max: 2
   between_retries: # задержка между повторными попытками (в секундах)
     min: 5
     max: 15
     attempts: 10  # максимальное количество попыток
     
 modules:
-  mode: "eth"    # режим работы, если "random" то будут выполнены модули в рандомном порядке, если "sequence" то по последовательности
+  mode: "random"    # режим работы, если "random" то будут выполнены модули в рандомном порядке, если "sequence" то по последовательности
   modules_count:
     min: 1
     max: 1
   sequence: # последовательность выполнения модулей (работает только если mode: "sequence")
     #- "Relay"
     - "Orca"
-    #- "Lifinity"
-   # - "Invariant"
-    #- "Solar"
-    #- "Underdog"
+    - "Lifinity"
+    - "Invariant"
+    - "Solar"
+    - "Underdog"
     - "Gas Station"
   enabled:
     orca: false
@@ -66,8 +66,10 @@ modules:
     invariant: false
     relay: false
     solar: false
-    underdog: false
+    underdog: true
     gas_station: false
+  limited: # сколько коллекций максимум будет создано на аккаунте(работает если использовать базу данных)
+    underdog: 1 # например если 1, значит больше 1 коллекций не будет создаваться, модуль будет пропускать 
   
 threads:
   count: 1  # количество одновременно работающих аккаунтов
@@ -80,3 +82,5 @@ telegram: # слать ли уведомления в телеграм
   bot_token: "" # создать бота у @BotFather
   user_id:  # айдишник можно получить здесь @getmyid_bot
   
+database:
+  enabled: true  # true - использовать БД, false - не использовать

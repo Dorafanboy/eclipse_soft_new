@@ -2,10 +2,13 @@
 
 import (
 	"context"
+	"database/sql"
+	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/model"
+	"eclipse/pkg/services/database"
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
 	"eclipse/utils/requester"
@@ -23,14 +26,27 @@ func (m *Module) Execute(
 	ctx context.Context,
 	httpClient http.Client,
 	client *rpc.Client,
+	cfg configs.AppConfig,
 	acc *model.EclipseAccount,
 	notifier *telegram.Notifier,
+	db *sql.DB,
 	words []string,
 	minEthHold float64,
 	maxAttempts int,
 ) (bool, error) {
 	logger.Info("Начал выполнение модуля Underdog Create Collection")
 	rand.Seed(time.Now().UnixNano())
+
+	count, err := database.GetModuleCountForWallet(db, acc.PublicKey.String(), "Underdog")
+	if err != nil {
+		logger.Error("Не удалось получить количество модулей: %v", err)
+		return false, err
+	}
+
+	if count >= cfg.Modules.Limited.Underdog {
+		logger.Info("Количество текущих транзакций в Underdog %d, больше чем ограничения из конфига %d, выполнять модуль не буду", count, cfg.Modules.Limited.Underdog)
+		return false, nil
+	}
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		word1 := words[rand.Intn(len(words))]
@@ -106,6 +122,20 @@ func (m *Module) Execute(
 			logger.Error("error creating collection from tx (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 			time.Sleep(3 * time.Second)
 			continue
+		}
+
+		if db != nil && cfg.Database.Enabled {
+			err = database.AddModule(
+				db,
+				acc.PublicKey.String(),
+				"Underdog",
+				"1",
+				collection.Name,
+				sig.String(),
+			)
+			if err != nil {
+				logger.Error("Failed to add module to database: %v", err)
+			}
 		}
 
 		notifier.AddSuccessMessageWithTxLink(

@@ -2,11 +2,13 @@ package gas_station
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/model"
+	"eclipse/pkg/services/database"
 	"eclipse/pkg/services/randomizer"
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
@@ -31,6 +33,7 @@ func (m *Module) Execute(
 	cfg configs.AppConfig,
 	acc *model.EclipseAccount,
 	notifier *telegram.Notifier,
+	db *sql.DB,
 	maxAttempts int,
 ) (bool, error) {
 	logger.Info("Начал выполнение модуля Gas Station")
@@ -88,6 +91,19 @@ func (m *Module) Execute(
 			time.Sleep(3 * time.Second)
 			continue
 		} else {
+			if db != nil && cfg.Database.Enabled {
+				err = database.AddModule(
+					db,
+					acc.PublicKey.String(),
+					"Gas Station",
+					fmt.Sprintf("%.6f", value),
+					"USDC",
+					sig.String(),
+				)
+				if err != nil {
+					logger.Error("Failed to add module to database: %v", err)
+				}
+			}
 			notifier.AddSuccessMessageWithTxLink(
 				acc.PublicKey.String(),
 				fmt.Sprintf("Gas Station: %.6f USDC -> ETH", value),

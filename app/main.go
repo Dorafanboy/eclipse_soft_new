@@ -1,9 +1,11 @@
 ﻿package main
 
 import (
+	"database/sql"
 	"eclipse/cmd"
 	"eclipse/configs"
 	"eclipse/internal/logger"
+	"eclipse/pkg/services/database"
 	"eclipse/pkg/services/file"
 	"eclipse/pkg/services/telegram"
 	"eclipse/storage"
@@ -71,6 +73,19 @@ func run() error {
 		logger.Info("Включен режим отправки уведомлений в телеграм")
 	}
 
+	var db *sql.DB
+
+	if appCfg.Database.Enabled {
+		logger.Info("Включен режим с использование базы данных")
+		db, err = database.InitDB()
+		if err != nil {
+			logger.Error("Failed to init database: %v", err)
+			return err
+		}
+		defer db.Close()
+		logger.Success("База данных успешно инициализирована")
+	}
+
 	notifier, err := telegram.NewNotifier(appCfg.Telegram.BotToken, appCfg.Telegram.UserID)
 	if err != nil {
 		return err
@@ -107,5 +122,5 @@ func run() error {
 
 	moduleManager := managers.NewModuleManager(*appCfg.Modules)
 
-	return cmd.StartSoft(*wallets, *appCfg, moduleManager, proxyManager, notifier, wordLists)
+	return cmd.StartSoft(*wallets, *appCfg, moduleManager, proxyManager, notifier, db, wordLists)
 }

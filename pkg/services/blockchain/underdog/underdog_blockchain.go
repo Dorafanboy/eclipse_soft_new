@@ -28,6 +28,8 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 	tx.Signatures[0] = newSignature
 
 	retries := uint(5)
+	version := uint64(0)
+
 	sig, err := client.SendTransactionWithOpts(ctx, tx,
 		rpc.TransactionOpts{
 			SkipPreflight:       true,
@@ -42,7 +44,8 @@ func SendSolanaTransaction(ctx context.Context, client *rpc.Client, encodedTx st
 	maxAttempts := 15
 	for i := 0; i < maxAttempts; i++ {
 		response, err := client.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
-			Commitment: rpc.CommitmentConfirmed,
+			Commitment:                     rpc.CommitmentConfirmed,
+			MaxSupportedTransactionVersion: &version,
 		})
 		if err != nil {
 			if i < maxAttempts-1 {

@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
@@ -9,6 +10,7 @@ import (
 	"eclipse/internal/token"
 	"eclipse/model"
 	"eclipse/pkg/services/blockchain/lifinity"
+	"eclipse/pkg/services/database"
 	"eclipse/pkg/services/randomizer"
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
@@ -33,6 +35,7 @@ func (m *Module) Execute(
 	cfg configs.AppConfig,
 	acc *model.EclipseAccount,
 	notifier *telegram.Notifier,
+	db *sql.DB,
 	maxAttempts int,
 ) (bool, error) {
 	logger.Info("Начал выполнение модуля Invariant Swap")
@@ -79,6 +82,21 @@ func (m *Module) Execute(
 				logger.Error("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 				time.Sleep(3 * time.Second)
 				continue
+			}
+			amount := float64(amountDecimals) / 1_000_000
+
+			if db != nil && cfg.Database.Enabled {
+				err = database.AddModule(
+					db,
+					acc.PublicKey.String(),
+					"Invariant",
+					fmt.Sprintf("%.6f", amount),
+					"USDC",
+					sig.String(),
+				)
+				if err != nil {
+					logger.Error("Failed to add module to database: %v", err)
+				}
 			}
 
 			notifier.AddSuccessMessageWithTxLink(
@@ -162,6 +180,22 @@ func (m *Module) Execute(
 				time.Sleep(3 * time.Second)
 				continue
 			} else {
+				if db != nil && cfg.Database.Enabled {
+					formatString := fmt.Sprintf("%%.%df", firstPair.Decimals)
+
+					err = database.AddModule(
+						db,
+						acc.PublicKey.String(),
+						"Invariant",
+						fmt.Sprintf(formatString, value),
+						firstPair.Symbol,
+						sig.String(),
+					)
+					if err != nil {
+						logger.Error("Failed to add module to database: %v", err)
+					}
+				}
+
 				notifier.AddSuccessMessageWithTxLink(
 					acc.PublicKey.String(),
 					fmt.Sprintf("Invariant Swap: %.6f %s -> %s", value, firstPair.Symbol, secondPair.Symbol),

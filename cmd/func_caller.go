@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/internal/base"
 	"eclipse/internal/logger"
@@ -25,11 +26,11 @@ import (
 	"github.com/gagliardetto/solana-go/rpc"
 )
 
-func StartSoft(wallets storage.WalletStorage, cfg configs.AppConfig, moduleManager *managers.ModuleManager, proxyManager *managers.ProxyManager, notifier *telegram.Notifier, lists *file.WordLists) error {
+func StartSoft(wallets storage.WalletStorage, cfg configs.AppConfig, moduleManager *managers.ModuleManager, proxyManager *managers.ProxyManager, notifier *telegram.Notifier, db *sql.DB, lists *file.WordLists) error {
 	ctx := context.Background()
 
 	if !cfg.Threads.Enabled {
-		return processAccountsRange(ctx, 0, 0, len(wallets.EvmAccounts), wallets, cfg, moduleManager, proxyManager, notifier, lists)
+		return processAccountsRange(ctx, 0, 0, len(wallets.EvmAccounts), wallets, cfg, moduleManager, proxyManager, notifier, db, lists)
 	}
 
 	var wg sync.WaitGroup
@@ -50,7 +51,7 @@ func StartSoft(wallets storage.WalletStorage, cfg configs.AppConfig, moduleManag
 		wg.Add(1)
 		go func(threadNum, start, end int) {
 			defer wg.Done()
-			if err := processAccountsRange(ctx, threadNum, start, end, wallets, cfg, moduleManager, proxyManager, notifier, lists); err != nil {
+			if err := processAccountsRange(ctx, threadNum, start, end, wallets, cfg, moduleManager, proxyManager, notifier, db, lists); err != nil {
 				errChan <- err
 			}
 		}(i, start, end)
@@ -68,7 +69,7 @@ func StartSoft(wallets storage.WalletStorage, cfg configs.AppConfig, moduleManag
 	return nil
 }
 
-func processAccountsRange(ctx context.Context, threadNum, start, end int, wallets storage.WalletStorage, cfg configs.AppConfig, moduleManager *managers.ModuleManager, proxyManager *managers.ProxyManager, notifier *telegram.Notifier, lists *file.WordLists) error {
+func processAccountsRange(ctx context.Context, threadNum, start, end int, wallets storage.WalletStorage, cfg configs.AppConfig, moduleManager *managers.ModuleManager, proxyManager *managers.ProxyManager, notifier *telegram.Notifier, db *sql.DB, lists *file.WordLists) error {
 	var moduleNames []string
 	for name := range moduleManager.EnabledModules {
 		moduleNames = append(moduleNames, name)
@@ -111,6 +112,7 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 				rpcClient,
 				*httpClient,
 				notifier,
+				db,
 				cfg.Delay.BetweenRetries.Attempts,
 			)
 
@@ -147,7 +149,6 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			}
 
 			logger.Info("Буду выполнять %d модулей на аккаунте %s\n", numModules, eclipseAcc.PublicKey.String())
-
 		} else if cfg.Modules.Mode == "queue" {
 			modulesToExecute = cfg.Modules.Sequence
 			logger.Info("Буду выполнять %d модулей на аккаунте %s\n", len(modulesToExecute), eclipseAcc.PublicKey.String())
@@ -245,15 +246,15 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 			switch moduleInfo.Type {
 			case interfaces.OrcaType:
 				module := moduleInfo.Module.(interfaces.OrcaModule)
-				res, err = module.Execute(ctx, rpcClient, cfg, eclipseAcc, proxyManager, notifier, i, cfg.Delay.BetweenRetries.Attempts)
+				res, err = module.Execute(ctx, rpcClient, cfg, eclipseAcc, proxyManager, notifier, db, i, cfg.Delay.BetweenRetries.Attempts)
 
 			case interfaces.UnderdogType:
 				module := moduleInfo.Module.(interfaces.UnderdogModule)
-				res, err = module.Execute(ctx, *httpClient, rpcClient, eclipseAcc, notifier, lists.Words, cfg.MinEthHold, cfg.Delay.BetweenRetries.Attempts)
+				res, err = module.Execute(ctx, *httpClient, rpcClient, cfg, eclipseAcc, notifier, db, lists.Words, cfg.MinEthHold, cfg.Delay.BetweenRetries.Attempts)
 
 			case interfaces.DefaultType:
 				module := moduleInfo.Module.(interfaces.DefaultModule)
-				res, err = module.Execute(ctx, *httpClient, rpcClient, cfg, eclipseAcc, notifier, cfg.Delay.BetweenRetries.Attempts)
+				res, err = module.Execute(ctx, *httpClient, rpcClient, cfg, eclipseAcc, notifier, db, cfg.Delay.BetweenRetries.Attempts)
 			}
 
 			if moduleIndex == len(modulesToExecute)-1 {
@@ -293,30 +294,9 @@ func processAccountsRange(ctx context.Context, threadNum, start, end int, wallet
 				wallets.EvmAccounts[i].Address.String(),
 				wallets.Eclipse[i].PublicKey.String(),
 			)
-			randomizer.RandomDelay(cfg.Delay.BetweenAccounts.Min, cfg.Delay.BetweenAccounts.Max, false)
+			randomizer.RandomDelay(cfg.Delay.BetweenAccounts.Min, cfg.Delay.BetweenAccounts.Max, true)
 		}
 	}
 
 	return nil
-}
-
-func isModuleEnabled(moduleName string, enabled configs.EnabledModulesConfig) bool {
-	switch moduleName {
-	case "Orca":
-		return enabled.Orca
-	case "Lifinity":
-		return enabled.Lifinity
-	case "Invariant":
-		return enabled.Invariant
-	case "Relay":
-		return enabled.Relay
-	case "Solar":
-		return enabled.Solar
-	case "Underdog":
-		return enabled.Underdog
-	case "GasStation":
-		return enabled.GasStation
-	default:
-		return false
-	}
 }

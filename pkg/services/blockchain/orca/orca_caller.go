@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
@@ -10,6 +11,7 @@ import (
 	"eclipse/model"
 	"eclipse/pkg/interfaces"
 	"eclipse/pkg/services/blockchain/lifinity"
+	"eclipse/pkg/services/database"
 	"eclipse/pkg/services/randomizer"
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
@@ -29,6 +31,7 @@ func (m *Module) Execute(
 	acc *model.EclipseAccount,
 	proxyManager interfaces.ProxyManagerInterface,
 	notifier *telegram.Notifier,
+	db *sql.DB,
 	accountIndex int,
 	maxAttempts int,
 ) (bool, error) {
@@ -96,6 +99,22 @@ func (m *Module) Execute(
 				continue
 			}
 
+			amount := float64(amountDecimals) / 1_000_000
+
+			if db != nil && cfg.Database.Enabled {
+				err = database.AddModule(
+					db,
+					acc.PublicKey.String(),
+					"Orca",
+					fmt.Sprintf("%.6f", amount),
+					"USDC",
+					sig.String(),
+				)
+				if err != nil {
+					logger.Error("Failed to add module to database: %v", err)
+				}
+			}
+
 			notifier.AddSuccessMessageWithTxLink(
 				acc.PublicKey.String(),
 				"Orca Swap: All USDC -> ETH",
@@ -106,7 +125,7 @@ func (m *Module) Execute(
 		} else {
 			var value float64
 			var valueStr string
-			
+
 			firstPair, secondPair, tokenType, err := base.GetRandomTokenPair(cfg.Invariant.Tokens)
 			if err != nil {
 				return false, err
@@ -172,7 +191,6 @@ func (m *Module) Execute(
 
 			logger.Info("Пытаюсь выполнить свап %f %s -> %s", value, firstPair.Symbol, secondPair.Symbol)
 
-			fmt.Println(firstPair.Address, secondPair.Address)
 			err = balance.CheckAndWaitForBalance(ctx, rpcClient, params, amountDecimals, maxAttempts, cfg.MinEthHold)
 			if err != nil {
 				logger.Error("Insufficient balance for pair (attempt %d/%d): %v", attempt+1, maxAttempts, err)
@@ -197,6 +215,22 @@ func (m *Module) Execute(
 				time.Sleep(3 * time.Second)
 				continue
 			} else {
+				formatString := fmt.Sprintf("%%.%df", firstPair.Decimals)
+
+				if db != nil && cfg.Database.Enabled {
+					err = database.AddModule(
+						db,
+						acc.PublicKey.String(),
+						"Orca",
+						fmt.Sprintf(formatString, value),
+						firstPair.Symbol,
+						sig.String(),
+					)
+					if err != nil {
+						logger.Error("Failed to add module to database: %v", err)
+					}
+				}
+
 				notifier.AddSuccessMessageWithTxLink(
 					acc.PublicKey.String(),
 					fmt.Sprintf("Orca Swap: %.6f %s -> %s", value, firstPair.Symbol, secondPair.Symbol),

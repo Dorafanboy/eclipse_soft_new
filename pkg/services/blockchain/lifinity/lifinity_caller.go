@@ -2,12 +2,14 @@
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/constants"
 	"eclipse/internal/base"
 	"eclipse/internal/logger"
 	"eclipse/internal/token"
 	"eclipse/model"
+	"eclipse/pkg/services/database"
 	"eclipse/pkg/services/randomizer"
 	"eclipse/pkg/services/telegram"
 	"eclipse/utils/balance"
@@ -45,7 +47,16 @@ type SwapParams struct {
 
 type Module struct{}
 
-func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rpc.Client, cfg configs.AppConfig, acc *model.EclipseAccount, notifier *telegram.Notifier, maxAttempts int) (bool, error) {
+func (m *Module) Execute(
+	ctx context.Context,
+	httpClient http.Client,
+	client *rpc.Client,
+	cfg configs.AppConfig,
+	acc *model.EclipseAccount,
+	notifier *telegram.Notifier,
+	db *sql.DB,
+	maxAttempts int,
+) (bool, error) {
 	logger.Info("Начал выполнение модуля Lifinity Swap")
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -73,6 +84,22 @@ func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rp
 				logger.Error("Ошибка свапа (попытка %d/%d): %v", attempt+1, maxAttempts, err)
 				time.Sleep(3 * time.Second)
 				continue
+			}
+
+			amount := float64(amountDecimals) / 1_000_000
+
+			if db != nil && cfg.Database.Enabled {
+				err = database.AddModule(
+					db,
+					acc.PublicKey.String(),
+					"Lifinity",
+					fmt.Sprintf("%.6f", amount),
+					"USDC",
+					sig.String(),
+				)
+				if err != nil {
+					logger.Error("Failed to add module to database: %v", err)
+				}
 			}
 
 			notifier.AddSuccessMessageWithTxLink(
@@ -159,6 +186,22 @@ func (m *Module) Execute(ctx context.Context, httpClient http.Client, client *rp
 				time.Sleep(3 * time.Second)
 				continue
 			} else {
+				formatString := fmt.Sprintf("%%.%df", firstPair.Decimals)
+
+				if db != nil && cfg.Database.Enabled {
+					err = database.AddModule(
+						db,
+						acc.PublicKey.String(),
+						"Lifinity",
+						fmt.Sprintf(formatString, value),
+						firstPair.Symbol,
+						sig.String(),
+					)
+					if err != nil {
+						logger.Error("Failed to add module to database: %v", err)
+					}
+				}
+
 				notifier.AddSuccessMessageWithTxLink(
 					acc.PublicKey.String(),
 					fmt.Sprintf("Lifinity Swap: %.6f %s -> %s", value, firstPair.Symbol, secondPair.Symbol),

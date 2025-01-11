@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"database/sql"
 	"eclipse/configs"
 	"eclipse/model"
 	"eclipse/pkg/services/telegram"
@@ -34,6 +35,7 @@ type OrcaModule interface {
 		acc *model.EclipseAccount,
 		proxyManager ProxyManagerInterface,
 		notifier *telegram.Notifier,
+		db *sql.DB,
 		accountIndex int,
 		maxAttempts int,
 	) (bool, error)
@@ -44,8 +46,10 @@ type UnderdogModule interface {
 		ctx context.Context,
 		httpClient http.Client,
 		rpcClient *rpc.Client,
+		cfg configs.AppConfig,
 		acc *model.EclipseAccount,
 		notifier *telegram.Notifier,
+		db *sql.DB,
 		words []string,
 		minEthHold float64,
 		maxAttempts int,
@@ -60,6 +64,7 @@ type DefaultModule interface {
 		cfg configs.AppConfig,
 		acc *model.EclipseAccount,
 		notifier *telegram.Notifier,
+		db *sql.DB,
 		maxAttempts int,
 	) (bool, error)
 }

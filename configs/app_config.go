@@ -20,6 +20,10 @@ type ThreadConfig struct {
 	Enabled bool `yaml:"enabled"`
 }
 
+type DatabaseConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
+
 type AppConfig struct {
 	Orca       *OrcaConfig
 	Invariant  *InvariantConfig
@@ -28,8 +32,9 @@ type AppConfig struct {
 	Modules    *ModulesConfig
 	Threads    ThreadConfig `yaml:"threads"`
 	Telegram   *TelegramConfig
-	IsShuffle  bool    `yaml:"is_shuffle"`
-	MinEthHold float64 `yaml:"min_eth_hold"`
+	IsShuffle  bool            `yaml:"is_shuffle"`
+	MinEthHold float64         `yaml:"min_eth_hold"`
+	Database   *DatabaseConfig `yaml:"database"`
 }
 
 type Token struct {
@@ -87,9 +92,10 @@ func NewAppConfig() (*AppConfig, error) {
 	}
 
 	var wrapper struct {
-		Threads    ThreadConfig `yaml:"threads"`
-		IsShuffle  bool         `yaml:"is_shuffle"`
-		MinEthHold float64      `yaml:"min_eth_hold"`
+		Threads    ThreadConfig   `yaml:"threads"`
+		IsShuffle  bool           `yaml:"is_shuffle"`
+		MinEthHold float64        `yaml:"min_eth_hold"`
+		Database   DatabaseConfig `yaml:"database"`
 	}
 	if err := yaml.Unmarshal(data, &wrapper); err != nil {
 		return nil, err
@@ -105,6 +111,7 @@ func NewAppConfig() (*AppConfig, error) {
 		Telegram:   telegramConfig,
 		IsShuffle:  wrapper.IsShuffle,
 		MinEthHold: wrapper.MinEthHold,
+		Database:   &wrapper.Database,
 	}, nil
 }
 

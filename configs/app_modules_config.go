@@ -28,6 +28,9 @@ type ModulesConfig struct {
 	Mode         string               `yaml:"mode"`
 	Sequence     []string             `yaml:"sequence"`
 	Enabled      EnabledModulesConfig `yaml:"enabled"`
+	Limited      struct {
+		Underdog int `yaml:"underdog"`
+	} `yaml:"limited"`
 }
 
 func NewModulesConfig() (*ModulesConfig, error) {
